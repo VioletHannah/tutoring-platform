@@ -1,0 +1,48 @@
+import request from '../utils/request';
+
+export const teacherAPI = {
+  // Search teachers
+  searchTeachers(params) {
+    return request.get('/teachers', { params });
+  },
+
+  // Get teacher by ID
+  getTeacherById(id) {
+    return request.get(`/teachers/${id}`);
+  },
+
+  // Get my profile
+  getMyProfile() {
+    return request.get('/teachers/my-profile');
+  },
+
+  // Create profile
+  createProfile(data) {
+    return request.post('/teachers/profile', data);
+  },
+
+  // Update profile
+  updateProfile(data) {
+    return request.put('/teachers/profile', data);
+  },
+
+  // Upload avatar
+  uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return request.post('/teachers/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // Upload certificates
+  uploadCertificates(files) {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('certificates', file);
+    });
+    return request.post('/teachers/certificates', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
+};
