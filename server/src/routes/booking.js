@@ -31,6 +31,13 @@ router.get(
 // Get booking by ID
 router.get('/:id', bookingController.getBookingById);
 
+// Submit review (student only, for completed bookings)
+router.put(
+  '/:id/review',
+  authorize('student'),
+  bookingController.submitReview
+);
+
 // Teacher actions
 router.put(
   '/:id/accept',

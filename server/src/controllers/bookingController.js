@@ -379,6 +379,69 @@ const completeBooking = async (req, res, next) => {
   }
 };
 
+/**
+ * Submit review for completed booking
+ * POST /api/bookings/:id/review
+ */
+const submitReview = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rating, review } = req.body;
+    const userId = req.user.userId;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return sendError(res, '请提供1-5分的评分', 400);
+    }
+
+    const booking = await Booking.findByPk(id);
+
+    if (!booking) {
+      return sendError(res, '预约不存在', 404);
+    }
+
+    if (booking.studentId !== userId) {
+      return sendError(res, '只有该预约的学生才能评价', 403);
+    }
+
+    if (booking.status !== 'completed') {
+      return sendError(res, '只能评价已完成的课程', 400);
+    }
+
+    if (booking.studentRating) {
+      return sendError(res, '该课程已评价过', 400);
+    }
+
+    await booking.update({
+      studentRating: rating,
+      studentReview: review || null
+    });
+
+    const teacherProfile = await TeacherProfile.findOne({
+      where: { userId: booking.teacherId }
+    });
+
+    if (teacherProfile) {
+      const allReviews = await Booking.findAll({
+        where: {
+          teacherId: booking.teacherId,
+          studentRating: { [Op.ne]: null }
+        },
+        attributes: ['studentRating']
+      });
+
+      const avgRating = allReviews.reduce((sum, b) => sum + b.studentRating, 0) / allReviews.length;
+      await teacherProfile.update({
+        rating: Math.round(avgRating * 100) / 100,
+        totalReviews: allReviews.length
+      });
+    }
+
+    sendSuccess(res, { rating, review }, '评价提交成功');
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createBooking,
   getMyBookings,
@@ -386,5 +449,6 @@ module.exports = {
   acceptBooking,
   rejectBooking,
   cancelBooking,
-  completeBooking
+  completeBooking,
+  submitReview
 };

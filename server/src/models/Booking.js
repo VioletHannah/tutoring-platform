@@ -70,6 +70,19 @@ const Booking = sequelize.define('Booking', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: true,
     field: 'total_amount'
+  },
+  studentRating: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: { min: 1, max: 5 },
+    comment: '学生对教师的评分 (1-5)',
+    field: 'student_rating'
+  },
+  studentReview: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: '学生评价内容',
+    field: 'student_review'
   }
 }, {
   tableName: 'bookings',

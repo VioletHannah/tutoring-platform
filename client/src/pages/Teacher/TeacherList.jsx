@@ -131,6 +131,13 @@ const TeacherList = () => {
                               <Tag key={subject} color="blue">{subject}</Tag>
                             ))}
                           </div>
+                          {teacher.tags?.length > 0 && (
+                            <div style={{ marginBottom: '6px' }}>
+                              {teacher.tags.slice(0, 3).map((tag, i) => (
+                                <Tag key={i} color="green">{tag}</Tag>
+                              ))}
+                            </div>
+                          )}
                           <div style={{ fontSize: '16px', color: '#ff4d4f', fontWeight: 'bold' }}>
                             ¥{teacher.hourlyRate || '-'}/小时
                           </div>

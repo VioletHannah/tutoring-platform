@@ -111,5 +111,18 @@ export const useBookingStore = create((set) => ({
       set({ loading: false });
       return { success: false, error };
     }
+  },
+
+  // Submit review
+  submitReview: async (id, data) => {
+    set({ loading: true });
+    try {
+      await bookingAPI.submitReview(id, data);
+      set({ loading: false });
+      return { success: true };
+    } catch (error) {
+      set({ loading: false });
+      return { success: false, error };
+    }
   }
 }));

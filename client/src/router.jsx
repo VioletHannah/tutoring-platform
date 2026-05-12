@@ -2,18 +2,16 @@ import { createBrowserRouter } from 'react-router-dom';
 import App from './App';
 import PrivateRoute from './components/PrivateRoute';
 
-// Pages
 import Home from './pages/Home/Home';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import TeacherList from './pages/Teacher/TeacherList';
-
-// Note: Additional pages would be imported here
-// import TeacherDetail from './pages/Teacher/TeacherDetail';
-// import TeacherProfile from './pages/Teacher/TeacherProfile';
-// import StudentDashboard from './pages/Student/StudentDashboard';
-// import MyBookings from './pages/Student/MyBookings';
-// etc...
+import TeacherDetail from './pages/Teacher/TeacherDetail';
+import TeacherProfile from './pages/Teacher/TeacherProfile';
+import TeacherBookings from './pages/Teacher/TeacherBookings';
+import StudentDashboard from './pages/Student/StudentDashboard';
+import MyBookings from './pages/Student/MyBookings';
+import ChatPage from './pages/Chat/ChatPage';
 
 export const router = createBrowserRouter([
   {
@@ -36,7 +34,14 @@ export const router = createBrowserRouter([
         path: 'teachers',
         element: <TeacherList />
       },
-      // Protected student routes
+      {
+        path: 'teachers/:userId',
+        element: <TeacherDetail />
+      },
+      {
+        path: 'chat',
+        element: <ChatPage />
+      },
       {
         path: 'student',
         children: [
@@ -44,7 +49,7 @@ export const router = createBrowserRouter([
             path: 'dashboard',
             element: (
               <PrivateRoute requireRole="student">
-                <div>Student Dashboard (To be implemented)</div>
+                <StudentDashboard />
               </PrivateRoute>
             )
           },
@@ -52,13 +57,12 @@ export const router = createBrowserRouter([
             path: 'bookings',
             element: (
               <PrivateRoute requireRole="student">
-                <div>My Bookings (To be implemented)</div>
+                <MyBookings />
               </PrivateRoute>
             )
           }
         ]
       },
-      // Protected teacher routes
       {
         path: 'teacher',
         children: [
@@ -66,7 +70,7 @@ export const router = createBrowserRouter([
             path: 'profile',
             element: (
               <PrivateRoute requireRole="teacher">
-                <div>Teacher Profile Editor (To be implemented)</div>
+                <TeacherProfile />
               </PrivateRoute>
             )
           },
@@ -74,7 +78,7 @@ export const router = createBrowserRouter([
             path: 'bookings',
             element: (
               <PrivateRoute requireRole="teacher">
-                <div>Teacher Bookings Management (To be implemented)</div>
+                <TeacherBookings />
               </PrivateRoute>
             )
           }

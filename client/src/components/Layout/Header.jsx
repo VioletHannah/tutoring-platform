@@ -1,5 +1,5 @@
 import { Layout, Menu, Button, Dropdown, Avatar } from 'antd';
-import { UserOutlined, LogoutOutlined, HomeOutlined, TeamOutlined, CalendarOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, HomeOutlined, TeamOutlined, CalendarOutlined, RobotOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { USER_ROLES } from '../../utils/constants';
@@ -48,6 +48,12 @@ const Header = () => {
       icon: <TeamOutlined />,
       label: '找老师',
       onClick: () => navigate('/teachers')
+    },
+    {
+      key: 'chat',
+      icon: <RobotOutlined />,
+      label: 'AI助手',
+      onClick: () => navigate('/chat')
     }
   ];
 

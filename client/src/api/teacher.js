@@ -44,5 +44,15 @@ export const teacherAPI = {
     return request.post('/teachers/certificates', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
+  },
+
+  // AI analyze profile
+  analyzeProfile() {
+    return request.post('/teachers/analyze-profile');
+  },
+
+  // Get teacher reviews
+  getTeacherReviews(teacherId) {
+    return request.get(`/teachers/${teacherId}/reviews`);
   }
 };

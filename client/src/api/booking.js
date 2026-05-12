@@ -34,5 +34,10 @@ export const bookingAPI = {
   // Cancel booking
   cancelBooking(id) {
     return request.put(`/bookings/${id}/cancel`);
+  },
+
+  // Submit review
+  submitReview(id, data) {
+    return request.put(`/bookings/${id}/review`, data);
   }
 };

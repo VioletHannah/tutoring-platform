@@ -111,6 +111,35 @@ const TeacherProfile = sequelize.define('TeacherProfile', {
     allowNull: false,
     defaultValue: 0,
     field: 'total_reviews'
+  },
+  tags: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'JSON格式AI分析标签',
+    get() {
+      const rawValue = this.getDataValue('tags');
+      return rawValue ? JSON.parse(rawValue) : [];
+    },
+    set(value) {
+      this.setDataValue('tags', JSON.stringify(value));
+    }
+  },
+  highlights: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: 'AI生成的档案亮点分析',
+    get() {
+      const rawValue = this.getDataValue('highlights');
+      return rawValue || '';
+    },
+    set(value) {
+      this.setDataValue('highlights', value);
+    }
+  },
+  analyzedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'analyzed_at'
   }
 }, {
   tableName: 'teacher_profiles',

@@ -13,6 +13,7 @@ const {
 
 // Public routes
 router.get('/', optionalAuth, validate(searchTeachersSchema, 'query'), teacherController.searchTeachers);
+router.get('/:id/reviews', optionalAuth, teacherController.getTeacherReviews);
 router.get('/:id', optionalAuth, teacherController.getTeacherById);
 
 // Protected teacher routes
@@ -53,6 +54,13 @@ router.post(
   authorize('teacher'),
   upload.array('certificates', 5),
   teacherController.uploadCertificates
+);
+
+router.post(
+  '/analyze-profile',
+  authenticate,
+  authorize('teacher'),
+  teacherController.analyzeProfile
 );
 
 module.exports = router;

@@ -231,11 +231,66 @@ const uploadCertificates = async (req, res, next) => {
   }
 };
 
+const analyzeProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { analyzeProfile: runAnalysis } = require('../agents/profileAnalyzer');
+
+    const profile = await TeacherProfile.findOne({ where: { userId } });
+    if (!profile) {
+      return sendError(res, '请先完善教师档案后再进行分析', 404);
+    }
+
+    const result = runAnalysis(profile);
+    await profile.update({
+      tags: result.tags,
+      highlights: result.highlights,
+      analyzedAt: result.analyzedAt
+    });
+
+    sendSuccess(res, {
+      tags: result.tags,
+      highlights: result.highlights,
+      analyzedAt: result.analyzedAt
+    }, 'AI 分析完成，档案标签已更新');
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getTeacherReviews = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { Booking, User } = require('../models');
+
+    const reviews = await Booking.findAll({
+      where: {
+        teacherId: id,
+        studentRating: { [Op.ne]: null }
+      },
+      include: [{
+        model: User,
+        as: 'student',
+        attributes: ['id', 'username']
+      }],
+      order: [['id', 'DESC']],
+      limit: 20,
+      attributes: ['id', 'subject', 'studentRating', 'studentReview', 'bookingDate']
+    });
+
+    sendSuccess(res, reviews, 'Reviews fetched successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrUpdateProfile,
   getMyProfile,
   getTeacherById,
   searchTeachers,
   uploadAvatar,
-  uploadCertificates
+  uploadCertificates,
+  analyzeProfile,
+  getTeacherReviews
 };

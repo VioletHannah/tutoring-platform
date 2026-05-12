@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
-    "seed": "sequelize-cli db:seed:all"
+    "seed": "node scripts/seed.js",
+    "seed:sequelize": "sequelize-cli db:seed:all"
   },
   "keywords": ["tutoring", "education", "api"],
   "author": "",
