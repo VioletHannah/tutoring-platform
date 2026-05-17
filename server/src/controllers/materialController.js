@@ -153,7 +153,7 @@ const getMyMaterials = async (req, res, next) => {
 
     const materials = await TeacherMaterial.findAll({
       where: { teacherId: userId },
-      order: [['createdAt', 'DESC']]
+      order: [['id', 'DESC']]
     });
 
     sendSuccess(res, materials, '材料列表获取成功');
@@ -182,13 +182,19 @@ const getPublicMaterials = async (req, res, next) => {
         'aiSummary',
         'aiTags',
         'aiHighlights',
-        'aiScore',
-        'createdAt'
+        'aiScore'
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['id', 'DESC']]
     });
 
-    sendSuccess(res, materials, '公开材料获取成功');
+    const parsed = materials.map(m => {
+      const item = m.toJSON ? m.toJSON() : { ...m };
+      if (typeof item.aiTags === 'string') item.aiTags = JSON.parse(item.aiTags);
+      if (typeof item.aiHighlights === 'string') item.aiHighlights = JSON.parse(item.aiHighlights);
+      return item;
+    });
+
+    sendSuccess(res, parsed, '公开材料获取成功');
   } catch (error) {
     next(error);
   }
@@ -305,7 +311,7 @@ const getPendingMaterials = async (req, res, next) => {
         as: 'teacherProfile',
         attributes: ['fullName', 'userId']
       }],
-      order: [['createdAt', 'ASC']],
+      order: [['id', 'ASC']],
       limit: parseInt(limit),
       offset: parseInt(offset)
     });

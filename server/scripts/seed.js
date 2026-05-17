@@ -492,6 +492,10 @@ const main = async () => {
     await sequelize.authenticate();
     console.log('✅ 数据库连接成功\n');
 
+    console.log('🔄 同步数据库结构...');
+    await sequelize.sync({ alter: false });
+    console.log('✅ 数据库同步完成\n');
+
     console.log('📝 创建用户和档案...');
     const users = await createSampleUsers();
 
