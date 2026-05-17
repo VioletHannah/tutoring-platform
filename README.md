@@ -22,6 +22,7 @@
 - ✅ 教师搜索筛选（科目、价格、性别、经验等）
 - ✅ 教师详情页 — 完整档案、证书、AI 分析标签、学生评价
 - ✅ 预约课程（选择科目、日期、时间，自动计算费用）
+- ✅ 🤖 AI 自动排期 — 设置偏好条件，自动生成推荐课表
 - ✅ 我的预约（查看、取消、筛选状态）
 - ✅ ⭐ 课后评价 — 评分 + 文字评价，自动更新教师评分
 
@@ -57,6 +58,7 @@
 - **状态机对话管理** — 多阶段对话流程控制
 - **Tool Calling** — Agent 自动调用后端 API 完成搜索与预约
 - **档案分析** — 规则引擎提取教学风格标签与亮点
+- **🤖 AI 自动排期** — 支持自然语言解析排课需求（如"每周二周五晚上排数学课"）
 
 ## 📦 项目结构
 
@@ -220,6 +222,8 @@ npm run dev       # http://localhost:5173
 | POST | /bookings | 创建预约 | 学生 |
 | GET | /bookings | 获取我的预约列表 | 需要登录 |
 | GET | /bookings/:id | 获取预约详情 | 需要登录 |
+| POST | /bookings/schedule/suggest | 🤖 生成推荐课表 | 学生 |
+| POST | /bookings/schedule/confirm | 🤖 确认课表并创建预约 | 学生 |
 | PUT | /bookings/:id/accept | 接受预约 | 教师 |
 | PUT | /bookings/:id/reject | 拒绝预约 | 教师 |
 | PUT | /bookings/:id/complete | 完成课程 | 教师 |

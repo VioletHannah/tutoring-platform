@@ -124,5 +124,31 @@ export const useBookingStore = create((set) => ({
       set({ loading: false });
       return { success: false, error };
     }
+  },
+
+  // Generate schedule suggestions
+  suggestSchedule: async (data) => {
+    set({ loading: true });
+    try {
+      const res = await bookingAPI.suggestSchedule(data);
+      set({ loading: false });
+      return { success: true, suggestions: res.data.suggestions, summary: res.data.summary };
+    } catch (error) {
+      set({ loading: false });
+      return { success: false, error };
+    }
+  },
+
+  // Confirm schedule and create bookings
+  confirmSchedule: async (data) => {
+    set({ loading: true });
+    try {
+      const res = await bookingAPI.confirmSchedule(data);
+      set({ loading: false });
+      return { success: true, bookings: res.data };
+    } catch (error) {
+      set({ loading: false });
+      return { success: false, error };
+    }
   }
 }));

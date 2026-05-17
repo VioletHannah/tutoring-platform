@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const { Booking, User, TeacherProfile } = require('../models');
 const { sendSuccess, sendError } = require('../utils/response');
 const { sequelize } = require('../config/database');
+const scheduleService = require('../services/scheduleService');
 
 /**
  * Create a new booking
@@ -442,6 +443,100 @@ const submitReview = async (req, res, next) => {
   }
 };
 
+/**
+ * Generate schedule suggestions (student only)
+ * POST /api/bookings/schedule/suggest
+ */
+const suggestSchedule = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'student') {
+      return sendError(res, 'Only students can generate schedule suggestions', 403);
+    }
+
+    const options = req.body;
+    const result = await scheduleService.generateScheduleSuggestions(options);
+
+    sendSuccess(res, result, 'Schedule suggestions generated successfully');
+  } catch (error) {
+    if (error.message.includes('conflict') || error.message.includes('not found') || error.message.includes('Invalid')) {
+      return sendError(res, error.message, 400);
+    }
+    next(error);
+  }
+};
+
+/**
+ * Confirm schedule and create bookings (student only)
+ * POST /api/bookings/schedule/confirm
+ */
+const confirmSchedule = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const studentId = req.user.userId;
+    const { teacherId, subject, scheduleItems, location, note } = req.body;
+
+    if (req.user.role !== 'student') {
+      await transaction.rollback();
+      return sendError(res, 'Only students can confirm schedules', 403);
+    }
+
+    if (!teacherId || !subject || !scheduleItems || scheduleItems.length === 0) {
+      await transaction.rollback();
+      return sendError(res, 'Missing required fields: teacherId, subject, scheduleItems', 400);
+    }
+
+    // Validate each schedule item has endTime > startTime
+    for (const item of scheduleItems) {
+      const { startTime, endTime } = item;
+      if (scheduleService.timeToMinutes(endTime) <= scheduleService.timeToMinutes(startTime)) {
+        await transaction.rollback();
+        return sendError(res, `Invalid time range: end time must be after start time (${startTime} - ${endTime})`, 400);
+      }
+    }
+
+    // Check if teacher exists and is active
+    const teacher = await User.findOne({
+      where: { id: teacherId, role: 'teacher', status: 'active' }
+    }, { transaction });
+
+    if (!teacher) {
+      await transaction.rollback();
+      return sendError(res, 'Teacher not found or not active', 404);
+    }
+
+    // Create bookings from schedule items
+    const commonData = { teacherId, subject, location, note };
+    const createdBookings = await scheduleService.createBookingsFromSchedule(
+      studentId,
+      scheduleItems,
+      commonData,
+      transaction
+    );
+
+    // Fetch complete bookings with relations
+    const completeBookings = await Promise.all(
+      createdBookings.map(booking => Booking.findByPk(booking.id, {
+        include: [
+          { model: User, as: 'student', attributes: ['id', 'username', 'email'] },
+          { model: User, as: 'teacher', attributes: ['id', 'username', 'email'] }
+        ],
+        transaction
+      }))
+    );
+
+    await transaction.commit();
+
+    sendSuccess(res, completeBookings, `${completeBookings.length} bookings created successfully`, 201);
+  } catch (error) {
+    await transaction.rollback();
+    if (error.message.includes('conflict')) {
+      return sendError(res, error.message, 409);
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   createBooking,
   getMyBookings,
@@ -450,5 +545,7 @@ module.exports = {
   rejectBooking,
   cancelBooking,
   completeBooking,
-  submitReview
+  submitReview,
+  suggestSchedule,
+  confirmSchedule
 };

@@ -39,5 +39,15 @@ export const bookingAPI = {
   // Submit review
   submitReview(id, data) {
     return request.put(`/bookings/${id}/review`, data);
+  },
+
+  // Generate schedule suggestions
+  suggestSchedule(data) {
+    return request.post('/bookings/schedule/suggest', data);
+  },
+
+  // Confirm schedule and create bookings
+  confirmSchedule(data) {
+    return request.post('/bookings/schedule/confirm', data);
   }
 };

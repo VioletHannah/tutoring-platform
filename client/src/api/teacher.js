@@ -54,5 +54,34 @@ export const teacherAPI = {
   // Get teacher reviews
   getTeacherReviews(teacherId) {
     return request.get(`/teachers/${teacherId}/reviews`);
+  },
+
+  // ============== Material APIs ==============
+
+  // Upload material
+  uploadMaterial(formData) {
+    return request.post('/teachers/materials', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // Get my materials
+  getMyMaterials() {
+    return request.get('/teachers/my-materials');
+  },
+
+  // Re-review material
+  reviewAgain(materialId) {
+    return request.post(`/teachers/materials/${materialId}/review-again`);
+  },
+
+  // Delete material
+  deleteMaterial(materialId) {
+    return request.delete(`/teachers/materials/${materialId}`);
+  },
+
+  // Get teacher's public materials (for student view)
+  getPublicMaterials(teacherId) {
+    return request.get(`/teachers/${teacherId}/materials/public`);
   }
 };

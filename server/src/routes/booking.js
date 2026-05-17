@@ -7,7 +7,9 @@ const { validate } = require('../middlewares/validator');
 const {
   createBookingSchema,
   updateBookingStatusSchema,
-  getBookingsSchema
+  getBookingsSchema,
+  suggestScheduleSchema,
+  confirmScheduleSchema
 } = require('../validators/bookingValidator');
 
 // All booking routes require authentication
@@ -62,6 +64,22 @@ router.put(
   '/:id/cancel',
   authorize('student', 'teacher'),
   bookingController.cancelBooking
+);
+
+// Schedule suggestions (students only)
+router.post(
+  '/schedule/suggest',
+  authorize('student'),
+  validate(suggestScheduleSchema),
+  bookingController.suggestSchedule
+);
+
+// Confirm schedule and create bookings (students only)
+router.post(
+  '/schedule/confirm',
+  authorize('student'),
+  validate(confirmScheduleSchema),
+  bookingController.confirmSchedule
 );
 
 module.exports = router;

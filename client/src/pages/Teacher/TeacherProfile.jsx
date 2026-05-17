@@ -1,11 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Card, Form, Input, Select, InputNumber, Button, Upload, message, Spin, Row, Col, Divider, Avatar, Image, Tag, Alert } from 'antd';
-import { UploadOutlined, UserOutlined, PlusOutlined, RobotOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Select, InputNumber, Button, Upload, message, Spin, Row, Col, Divider, Avatar, Image, Tag, Alert, Table, Popconfirm, Tooltip, Progress, Space } from 'antd';
+import { UploadOutlined, UserOutlined, PlusOutlined, RobotOutlined, CheckCircleOutlined, DeleteOutlined, ReloadOutlined, FileTextOutlined, SafetyCertificateOutlined, BankOutlined, ExperimentOutlined, ReadOutlined, PaperClipOutlined } from '@ant-design/icons';
 import { useTeacherStore } from '../../store/teacherStore';
 import { teacherAPI } from '../../api';
-import { UPLOAD_URL, SUBJECTS, GENDER_OPTIONS } from '../../utils/constants';
+import { UPLOAD_URL, SUBJECTS, GENDER_OPTIONS, MATERIAL_TYPES, MATERIAL_TYPE_LABELS, REVIEW_STATUS_CONFIG } from '../../utils/constants';
 
 const { TextArea } = Input;
+
+const MATERIAL_TYPE_ICONS = {
+  certificate: <SafetyCertificateOutlined />,
+  education: <BankOutlined />,
+  experience: <ExperimentOutlined />,
+  self_intro: <ReadOutlined />,
+  other: <PaperClipOutlined />
+};
+
+const MATERIAL_TYPE_ICON_ELEMENTS = {
+  certificate: <SafetyCertificateOutlined />,
+  education: <BankOutlined />,
+  experience: <ExperimentOutlined />,
+  self_intro: <ReadOutlined />,
+  other: <PaperClipOutlined />
+};
 
 const TeacherProfile = () => {
   const [form] = Form.useForm();
@@ -18,8 +34,16 @@ const TeacherProfile = () => {
   const [highlights, setHighlights] = useState('');
   const [analyzedAt, setAnalyzedAt] = useState(null);
 
+  // Material upload states
+  const [materials, setMaterials] = useState([]);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [materialUploadOpen, setMaterialUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [materialForm] = Form.useForm();
+
   useEffect(() => {
     loadProfile();
+    loadMaterials();
   }, []);
 
   useEffect(() => {
@@ -37,6 +61,18 @@ const TeacherProfile = () => {
     const result = await getMyProfile();
     if (!result.success) {
       message.error('加载教师档案失败');
+    }
+  };
+
+  const loadMaterials = async () => {
+    setMaterialsLoading(true);
+    try {
+      const res = await teacherAPI.getMyMaterials();
+      setMaterials(res.data || []);
+    } catch (err) {
+      console.error('加载材料失败', err);
+    } finally {
+      setMaterialsLoading(false);
     }
   };
 
@@ -91,6 +127,150 @@ const TeacherProfile = () => {
     }
     return false;
   };
+
+  // Material upload handlers
+  const handleMaterialUpload = async (values) => {
+    const { file, materialType, title } = values;
+    if (!file) {
+      message.error('请选择要上传的文件');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('materialType', materialType);
+      formData.append('title', title);
+
+      const res = await teacherAPI.uploadMaterial(formData);
+
+      message.info(res.data.message || '材料上传成功，AI 已完成初步审核');
+      materialForm.resetFields();
+      setMaterialUploadOpen(false);
+      loadMaterials();
+    } catch (err) {
+      message.error(err.response?.data?.message || '上传失败');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleReviewAgain = async (materialId) => {
+    try {
+      await teacherAPI.reviewAgain(materialId);
+      message.success('AI 重新审核完成');
+      loadMaterials();
+    } catch (err) {
+      message.error(err.response?.data?.message || '重新审核失败');
+    }
+  };
+
+  const handleDeleteMaterial = async (materialId) => {
+    try {
+      await teacherAPI.deleteMaterial(materialId);
+      message.success('材料删除成功');
+      loadMaterials();
+    } catch (err) {
+      message.error(err.response?.data?.message || '删除失败');
+    }
+  };
+
+  const renderStatusTag = (status) => {
+    const config = REVIEW_STATUS_CONFIG[status] || { color: 'default', label: status };
+    return <Tag color={config.color}>{config.label}</Tag>;
+  };
+
+  const renderScoreBar = (score) => {
+    if (score === null || score === undefined) return '-';
+    let color = '#52c41a';
+    if (score < 50) color = '#ff4d4f';
+    else if (score < 80) color = '#faad14';
+    return <Progress percent={score} size="small" status={score >= 80 ? 'success' : 'exception'} strokeColor={color} style={{ width: 100 }} />;
+  };
+
+  const materialColumns = [
+    {
+      title: '类型',
+      dataIndex: 'materialType',
+      key: 'materialType',
+      width: 100,
+      render: (type) => (
+        <Space>
+          {MATERIAL_TYPE_ICON_ELEMENTS[type] || <FileTextOutlined />}
+          {MATERIAL_TYPE_LABELS[type] || type}
+        </Space>
+      )
+    },
+    {
+      title: '标题',
+      dataIndex: 'title',
+      key: 'title',
+      ellipsis: true
+    },
+    {
+      title: '状态',
+      dataIndex: 'reviewStatus',
+      key: 'reviewStatus',
+      width: 110,
+      render: renderStatusTag
+    },
+    {
+      title: 'AI 评分',
+      dataIndex: 'aiScore',
+      key: 'aiScore',
+      width: 130,
+      render: renderScoreBar
+    },
+    {
+      title: 'AI 摘要',
+      dataIndex: 'aiSummary',
+      key: 'aiSummary',
+      ellipsis: true,
+      render: (text) => text ? <Tooltip title={text}>{text.substring(0, 50)}...</Tooltip> : '-'
+    },
+    {
+      title: 'AI 标签',
+      dataIndex: 'aiTags',
+      key: 'aiTags',
+      width: 180,
+      render: (tags) => (
+        <span>
+          {(tags || []).slice(0, 3).map((tag, i) => (
+            <Tag key={i} color="blue" style={{ marginBottom: 2 }}>{tag}</Tag>
+          ))}
+          {(tags || []).length > 3 && <Tag color="default">+{tags.length - 3}</Tag>}
+        </span>
+      )
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 150,
+      render: (_, record) => (
+        <Space size="small">
+          <Button
+            type="link"
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => handleReviewAgain(record.id)}
+          >
+            重审
+          </Button>
+          <Popconfirm
+            title="确定要删除此材料吗？"
+            onConfirm={() => handleDeleteMaterial(record.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ];
 
   if (loading && !myProfile) {
     return (
@@ -239,6 +419,7 @@ const TeacherProfile = () => {
                 </Col>
               </Row>
             </Image.PreviewGroup>
+
           <Divider>AI 智能分析</Divider>
             {highlights ? (
               <Alert
@@ -273,6 +454,107 @@ const TeacherProfile = () => {
             </Button>
           </Form>
         </Spin>
+      </Card>
+
+      {/* Material Upload Section */}
+      <Card
+        title="资质材料与 AI 审核"
+        extra={
+          <Button
+            type="primary"
+            icon={<UploadOutlined />}
+            onClick={() => setMaterialUploadOpen(true)}
+          >
+            上传材料
+          </Button>
+        }
+        style={{ marginTop: 16 }}
+      >
+        <Alert
+          type="info"
+          message="温馨提示"
+          description="当前版本可能无法完整识别图片/PDF 文字，平台会基于文件信息和材料类型给出初步审核建议。如需完整审核，请上传文本文件或等待人工复核。"
+          style={{ marginBottom: 16 }}
+        />
+
+        <Spin spinning={materialsLoading}>
+          <Table
+            columns={materialColumns}
+            dataSource={materials}
+            rowKey="id"
+            pagination={{ pageSize: 10, size: 'small' }}
+            size="small"
+            locale={{ emptyText: '暂无上传材料' }}
+          />
+        </Spin>
+
+        {/* Upload Modal */}
+        {materialUploadOpen && (
+          <div style={{ marginTop: 16 }}>
+            <Form
+              form={materialForm}
+              layout="vertical"
+              onFinish={handleMaterialUpload}
+            >
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="materialType"
+                    label="材料类型"
+                    rules={[{ required: true, message: '请选择材料类型' }]}
+                  >
+                    <Select placeholder="请选择材料类型">
+                      {MATERIAL_TYPES.map(t => (
+                        <Select.Option key={t.value} value={t.value}>
+                          {t.label}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="title"
+                    label="材料标题"
+                    rules={[{ required: true, message: '请输入材料标题' }]}
+                  >
+                    <Input placeholder="如：高中数学教师资格证" maxLength={100} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item
+                name="file"
+                label="选择文件"
+                rules={[{ required: true, message: '请选择要上传的文件' }]}
+              >
+                <Upload
+                  accept=".jpg,.jpeg,.png,.webp,.pdf,.txt"
+                  maxCount={1}
+                  beforeUpload={(file) => {
+                    materialForm.setFieldValue('file', file);
+                    return false;
+                  }}
+                  fileList={materialForm.getFieldValue('file') ? [materialForm.getFieldValue('file')] : []}
+                  onRemove={() => {
+                    materialForm.setFieldValue('file', null);
+                  }}
+                >
+                  <Button icon={<UploadOutlined />}>选择文件（支持 JPG、PNG、WEBP、PDF、TXT，最大 10MB）</Button>
+                </Upload>
+              </Form.Item>
+              <Form.Item style={{ marginBottom: 0 }}>
+                <Space>
+                  <Button type="primary" htmlType="submit" loading={uploading}>
+                    上传并AI审核
+                  </Button>
+                  <Button onClick={() => { setMaterialUploadOpen(false); materialForm.resetFields(); }}>
+                    取消
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </div>
+        )}
       </Card>
     </div>
   );

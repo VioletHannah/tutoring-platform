@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Avatar, Tag, Button, Descriptions, Image, Spin, Empty, Rate, Divider, Typography, List, Alert } from 'antd';
-import { UserOutlined, ClockCircleOutlined, DollarOutlined, BookOutlined, CheckCircleOutlined, RobotOutlined, CommentOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Avatar, Tag, Button, Descriptions, Image, Spin, Empty, Rate, Divider, Typography, List, Alert, Space } from 'antd';
+import { UserOutlined, ClockCircleOutlined, DollarOutlined, BookOutlined, CheckCircleOutlined, RobotOutlined, CommentOutlined, SafetyCertificateOutlined, BankOutlined, ExperimentOutlined, ReadOutlined, PaperClipOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useTeacherStore } from '../../store/teacherStore';
 import { useAuthStore } from '../../store/authStore';
 import { teacherAPI } from '../../api';
-import { UPLOAD_URL, USER_ROLES } from '../../utils/constants';
+import { UPLOAD_URL, USER_ROLES, MATERIAL_TYPE_LABELS } from '../../utils/constants';
 import BookingModal from '../../components/BookingModal';
 
 const { Title, Paragraph, Text } = Typography;
+
+const MATERIAL_TYPE_ICONS = {
+  certificate: <SafetyCertificateOutlined />,
+  education: <BankOutlined />,
+  experience: <ExperimentOutlined />,
+  self_intro: <ReadOutlined />,
+  other: <PaperClipOutlined />
+};
 
 const TeacherDetail = () => {
   const { userId } = useParams();
@@ -18,11 +26,14 @@ const TeacherDetail = () => {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [publicMaterials, setPublicMaterials] = useState([]);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
 
   useEffect(() => {
     if (userId) {
       getTeacherById(userId);
       fetchReviews(userId);
+      fetchPublicMaterials(userId);
     }
   }, [userId]);
 
@@ -35,6 +46,18 @@ const TeacherDetail = () => {
       setReviews([]);
     } finally {
       setReviewsLoading(false);
+    }
+  };
+
+  const fetchPublicMaterials = async (id) => {
+    setMaterialsLoading(true);
+    try {
+      const res = await teacherAPI.getPublicMaterials(id);
+      setPublicMaterials(res.data || []);
+    } catch {
+      setPublicMaterials([]);
+    } finally {
+      setMaterialsLoading(false);
     }
   };
 
@@ -164,6 +187,57 @@ const TeacherDetail = () => {
                 </Image.PreviewGroup>
               </>
             )}
+
+            {/* AI Materials Highlights Section */}
+            <Spin spinning={materialsLoading}>
+              <Divider />
+              <Title level={5}><SafetyCertificateOutlined /> AI 提炼的教师资质亮点</Title>
+              {publicMaterials.length > 0 ? (
+                <List
+                  dataSource={publicMaterials}
+                  renderItem={(material) => (
+                    <List.Item key={material.id} style={{ padding: '12px 0' }}>
+                      <div style={{ width: '100%' }}>
+                        <Space style={{ marginBottom: 8 }}>
+                          {MATERIAL_TYPE_ICONS[material.materialType] || <FileTextOutlined />}
+                          <Text strong>{material.title}</Text>
+                          <Tag color="green">{MATERIAL_TYPE_LABELS[material.materialType] || material.materialType}</Tag>
+                          {material.aiScore && (
+                            <Tag color={material.aiScore >= 80 ? 'green' : 'orange'}>
+                              AI评分 {material.aiScore}
+                            </Tag>
+                          )}
+                        </Space>
+                        <div style={{ marginBottom: 8, color: '#666' }}>
+                          {material.aiSummary}
+                        </div>
+                        {(material.aiTags || []).length > 0 && (
+                          <div style={{ marginBottom: 4 }}>
+                            {(material.aiTags).map((tag, i) => (
+                              <Tag key={i} color="blue" style={{ marginBottom: 2 }}>{tag}</Tag>
+                            ))}
+                          </div>
+                        )}
+                        {(material.aiHighlights || []).length > 0 && (
+                          <div>
+                            <Text type="secondary" style={{ fontSize: 12 }}>亮点：</Text>
+                            {(material.aiHighlights).map((highlight, i) => (
+                              <Tag key={i} color="green" style={{ marginBottom: 2 }}>{highlight}</Tag>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Alert
+                  type="info"
+                  message="该教师暂未公开 AI 审核通过的资质材料。"
+                  description="教师上传材料并通过 AI 审核后，将在此处展示资质亮点。"
+                />
+              )}
+            </Spin>
 
             {teacher.tags?.length > 0 && (
               <>

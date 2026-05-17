@@ -3,6 +3,7 @@ const TeacherProfile = require('./TeacherProfile');
 const StudentProfile = require('./StudentProfile');
 const Institution = require('./Institution');
 const Booking = require('./Booking');
+const TeacherMaterial = require('./TeacherMaterial');
 
 // Define associations
 // User - TeacherProfile (1:1)
@@ -59,10 +60,23 @@ Booking.belongsTo(User, {
   as: 'teacher'
 });
 
+// TeacherProfile - TeacherMaterial (1:N)
+TeacherProfile.hasMany(TeacherMaterial, {
+  foreignKey: 'teacherId',
+  as: 'materials',
+  sourceKey: 'userId'
+});
+TeacherMaterial.belongsTo(TeacherProfile, {
+  foreignKey: 'teacherId',
+  as: 'teacherProfile',
+  targetKey: 'userId'
+});
+
 module.exports = {
   User,
   TeacherProfile,
   StudentProfile,
   Institution,
-  Booking
+  Booking,
+  TeacherMaterial
 };

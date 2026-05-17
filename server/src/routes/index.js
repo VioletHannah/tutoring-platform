@@ -5,10 +5,12 @@ const authRoutes = require('./auth');
 const teacherRoutes = require('./teacher');
 const bookingRoutes = require('./booking');
 const agentRoutes = require('./agent');
+const materialRoutes = require('./material');
 
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/teachers', teacherRoutes);
+router.use('/teachers', materialRoutes); // Material routes under /teachers
 router.use('/bookings', bookingRoutes);
 router.use('/agent', agentRoutes);
 

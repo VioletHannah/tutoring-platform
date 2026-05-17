@@ -1,6 +1,6 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { sequelize } = require('../src/config/database');
-const { User, TeacherProfile, StudentProfile, Institution, Booking } = require('../src/models');
+const { User, TeacherProfile, StudentProfile, Institution, Booking, TeacherMaterial } = require('../src/models');
 const { hashPassword } = require('../src/utils/bcrypt');
 
 const SAMPLE_USERS = [
@@ -332,6 +332,159 @@ const createSampleBookings = async (users) => {
   }
 };
 
+const createSampleMaterials = async (users) => {
+  const teachers = users.filter(u => u.role === 'teacher');
+  if (teachers.length === 0) return;
+
+  const sampleMaterials = [
+    // 王老师 (teachers[0]) - 数学硕士
+    {
+      teacherId: teachers[0].id,
+      materialType: 'certificate',
+      title: '高中数学教师资格证',
+      originalFilename: 'math_teacher_cert.jpg',
+      fileMimeType: 'image/jpeg',
+      fileSize: 1024000,
+      extractedText: '教师资格证 高中数学 合格 认定 证书编号：2024001234 通过考试',
+      aiSummary: '该材料为"高中数学教师资格证"，内容较为简短，AI 提取到的文字有限。',
+      aiTags: JSON.stringify(['资质证书', '数学', '持证教师']),
+      aiHighlights: JSON.stringify(['具备教师资格证', '材料与数学教学相关']),
+      aiRiskFlags: JSON.stringify([]),
+      aiScore: 80,
+      reviewStatus: 'approved',
+      reviewSuggestion: '建议通过，并在教师详情页展示数学资质亮点。'
+    },
+    {
+      teacherId: teachers[0].id,
+      materialType: 'education',
+      title: '硕士学位证书',
+      originalFilename: 'master_degree.pdf',
+      fileMimeType: 'application/pdf',
+      fileSize: 2048000,
+      extractedText: '硕士学位证书 985大学 数学系 毕业 2021年',
+      aiSummary: '该材料为"硕士学位证书"，内容包含高等教育学历信息。',
+      aiTags: JSON.stringify(['学历证明', '硕士学历', '数学']),
+      aiHighlights: JSON.stringify(['有高等教育学历证明', '具备硕士及以上学历']),
+      aiRiskFlags: JSON.stringify([]),
+      aiScore: 80,
+      reviewStatus: 'approved',
+      reviewSuggestion: '建议通过，展示教师高学历背景。'
+    },
+    {
+      teacherId: teachers[0].id,
+      materialType: 'experience',
+      title: '教学经历证明',
+      originalFilename: 'experience.txt',
+      fileMimeType: 'text/plain',
+      fileSize: 5120,
+      extractedText: '曾在学而思担任数学教师，负责一对一辅导和小组授课，累计教学经验3年。擅长初中数学家教辅导。',
+      aiSummary: '该材料为"教学经历证明"，内容提到一对一辅导和数学教学经验。',
+      aiTags: JSON.stringify(['教学经历', '数学']),
+      aiHighlights: JSON.stringify(['有家教一对一辅导经验', '有K12学段教学经验']),
+      aiRiskFlags: JSON.stringify([]),
+      aiScore: 75,
+      reviewStatus: 'approved',
+      reviewSuggestion: '建议通过，展示教学经验。'
+    },
+    // 刘老师 (teachers[2]) - 化学博士
+    {
+      teacherId: teachers[2].id,
+      materialType: 'certificate',
+      title: '化学竞赛省级一等奖证书',
+      originalFilename: 'chemistry_award.jpg',
+      fileMimeType: 'image/jpeg',
+      fileSize: 1536000,
+      extractedText: '化学竞赛 省级一等奖 高中组 获奖证书',
+      aiSummary: '该材料疑似为化学相关竞赛获奖证书，能够增强教师学科能力可信度。',
+      aiTags: JSON.stringify(['资质证书', '化学', '竞赛获奖']),
+      aiHighlights: JSON.stringify(['有学科竞赛相关证书']),
+      aiRiskFlags: JSON.stringify([]),
+      aiScore: 85,
+      reviewStatus: 'approved',
+      reviewSuggestion: '建议通过，展示教师学科竞赛背景。'
+    },
+    {
+      teacherId: teachers[2].id,
+      materialType: 'education',
+      title: '博士学位证书',
+      originalFilename: 'phd_degree.jpg',
+      fileMimeType: 'image/jpeg',
+      fileSize: 1843200,
+      extractedText: '博士 学位证书 化学专业 985高校 毕业',
+      aiSummary: '该材料疑似为博士学位证书，展示教师高学历背景。',
+      aiTags: JSON.stringify(['学历证明', '博士学历', '化学']),
+      aiHighlights: JSON.stringify(['具备博士学历', '有高等教育学历证明']),
+      aiRiskFlags: JSON.stringify([]),
+      aiScore: 85,
+      reviewStatus: 'approved',
+      reviewSuggestion: '建议通过，突出教师博士学历优势。'
+    },
+    // 陈老师 (teachers[1]) - 英语教师
+    {
+      teacherId: teachers[1].id,
+      materialType: 'certificate',
+      title: '英语专业八级证书',
+      originalFilename: 'tem8_cert.jpg',
+      fileMimeType: 'image/jpeg',
+      fileSize: 921600,
+      extractedText: '英语专业八级 证书 TEM8 合格',
+      aiSummary: '该材料疑似为英语专业八级证书，能够证明教师英语能力。',
+      aiTags: JSON.stringify(['资质证书', '英语能力']),
+      aiHighlights: JSON.stringify(['具备英语能力证明']),
+      aiRiskFlags: JSON.stringify([]),
+      aiScore: 80,
+      reviewStatus: 'approved',
+      reviewSuggestion: '建议通过，展示英语专业资质。'
+    },
+    // 赵老师 (teachers[3]) - 计算机教师
+    {
+      teacherId: teachers[3].id,
+      materialType: 'experience',
+      title: '编程教学经历',
+      originalFilename: 'coding_exp.txt',
+      fileMimeType: 'text/plain',
+      fileSize: 4096,
+      extractedText: '曾在某编程培训机构担任Python和Scratch课程讲师，累计授课200+课时。',
+      aiSummary: '该材料为编程教学经历证明，展示教师丰富的编程教学经验。',
+      aiTags: JSON.stringify(['教学经历', '计算机', '编程']),
+      aiHighlights: JSON.stringify(['有丰富的编程教学经验']),
+      aiRiskFlags: JSON.stringify([]),
+      aiScore: 80,
+      reviewStatus: 'approved',
+      reviewSuggestion: '建议通过，突出编程教学专长。'
+    },
+    // 待审核材料示例
+    {
+      teacherId: teachers[0].id,
+      materialType: 'self_intro',
+      title: '个人教学理念',
+      originalFilename: 'teaching_philosophy.jpg',
+      fileMimeType: 'image/jpeg',
+      fileSize: 512000,
+      extractedText: '',
+      aiSummary: '该材料为"个人教学理念"，材料文字内容为空，可能为纯图片/PDF。',
+      aiTags: JSON.stringify(['个人介绍']),
+      aiHighlights: JSON.stringify([]),
+      aiRiskFlags: JSON.stringify(['材料文字内容为空，可能为纯图片/PDF']),
+      aiScore: 40,
+      reviewStatus: 'need_manual_review',
+      reviewSuggestion: '建议人工复核，图片材料暂无法完整识别文字，需要人工确认内容。'
+    }
+  ];
+
+  for (const material of sampleMaterials) {
+    const [created] = await TeacherMaterial.findOrCreate({
+      where: {
+        teacherId: material.teacherId,
+        title: material.title
+      },
+      defaults: material
+    });
+    const teacher = users.find(u => u.id === material.teacherId);
+    console.log(`  ${created ? '✅' : '⏭'} 材料: ${teacher?.username} - ${material.title} [${material.reviewStatus}]`);
+  }
+};
+
 const main = async () => {
   console.log('\n🚀 开始填充示例数据...\n');
 
@@ -344,6 +497,9 @@ const main = async () => {
 
     console.log('\n📅 创建示例预约...');
     await createSampleBookings(users);
+
+    console.log('\n📄 创建示例材料...');
+    await createSampleMaterials(users);
 
     console.log('\n🎉 示例数据填充完成！');
     console.log('\n--- 测试账户 ---');

@@ -36,6 +36,113 @@ const MOCK_PROMPTS = {
   ]
 };
 
+const WEEKDAY_MAP = {
+  '周一': 1, '周二': 2, '周三': 3, '周四': 4, '周五': 5, '周六': 6, '周日': 7,
+  '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6, '星期日': 7
+};
+
+const TIME_RANGE_PRESETS = {
+  '早上': { start: '07:00:00', end: '09:00:00' },
+  '上午': { start: '09:00:00', end: '12:00:00' },
+  '中午': { start: '12:00:00', end: '14:00:00' },
+  '下午': { start: '14:00:00', end: '18:00:00' },
+  '晚上': { start: '18:00:00', end: '21:00:00' },
+  '傍晚': { start: '17:00:00', end: '19:00:00' }
+};
+
+function parseScheduleIntent(message) {
+  const result = {
+    isScheduleRequest: false,
+    subject: null,
+    teacherName: null,
+    preferredWeekdays: [],
+    preferredTimeRanges: [],
+    durationMinutes: 90,
+    sessionsPerWeek: null,
+    totalSessions: null,
+    startDate: null,
+    endDate: null
+  };
+
+  const m = message.toLowerCase();
+
+  if (!/排课 | 排期 | 自动约 | 自动排 | 自动订/.test(m)) {
+    return result;
+  }
+
+  result.isScheduleRequest = true;
+
+  const subjects = ['数学', '物理', '化学', '生物', '英语', '语文', '历史', '地理', '政治', '计算机', '编程'];
+  for (const s of subjects) {
+    if (message.includes(s)) {
+      result.subject = s;
+      break;
+    }
+  }
+
+  const teacherMatch = message.match(/(王 | 李|张 | 刘|陈|赵 | 黄 | 周 | 吴 | 徐 | 林 | 何 | 郭 | 马 | 朱 | 胡 | 顾 | 罗 | 高 | 郑 | 梁 | 谢 | 宋 | 唐 | 许 | 邓 | 韩 | 冯 | 曹 | 曾 | 彭 | 萧 | 田 | 董 | 袁 | 潘 | 于 | 蒋 | 蔡 | 余 | 杜 | 叶 | 程 | 苏 | 吕 | 丁 | 任 | 姚 | 廖 | 傅|钟 | 魏 | 薛 | 阎 | 姜 | 范 | 方 | 石 | 谭 | 邹 | 熊 | 金 | 陆 | 郝 | 孔 | 白 | 崔 | 康 | 毛 | 邱 | 秦 | 江 | 史 | 侯 | 邵 | 龙 | 万 | 段 | 雷 | 钱 | 汤 | 尹 | 黎 | 易 | 常 | 武 | 乔 | 贺 | 赖 | 龚 | 文)(老师 | 教师)/);
+  if (teacherMatch) {
+    result.teacherName = teacherMatch[0].replace(/老师 | 教师$/, '');
+  }
+
+  const weekdays = [];
+  for (const [key, value] of Object.entries(WEEKDAY_MAP)) {
+    if (message.includes(key)) {
+      if (!weekdays.includes(value)) {
+        weekdays.push(value);
+      }
+    }
+  }
+  result.preferredWeekdays = weekdays;
+
+  for (const [key, range] of Object.entries(TIME_RANGE_PRESETS)) {
+    if (message.includes(key)) {
+      if (!result.preferredTimeRanges.find(r => r.start === range.start)) {
+        result.preferredTimeRanges.push(range);
+      }
+    }
+  }
+
+  const sessionsMatch = message.match(/每周 (\d+) 次 | 一周 (\d+) 次 | 每星期 (\d+) 次/);
+  if (sessionsMatch) {
+    result.sessionsPerWeek = parseInt(sessionsMatch[1] || sessionsMatch[2] || sessionsMatch[3]);
+  }
+
+  const totalMatch = message.match(/一共 (\d+) 节 | 总共 (\d+) 节 | 共 (\d+) 节 | (\d+) 节课/);
+  if (totalMatch) {
+    result.totalSessions = parseInt(totalMatch[1] || totalMatch[2] || totalMatch[3] || totalMatch[4]);
+  }
+
+  const durationMatch = message.match(/(\d+) 分钟 | 上 (\d+) 分钟 | 时长 (\d+)/);
+  if (durationMatch) {
+    result.durationMinutes = parseInt(durationMatch[1] || durationMatch[2] || durationMatch[3]);
+  }
+
+  const today = new Date();
+  if (message.includes('下个月') || message.includes('下月')) {
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    result.startDate = nextMonth.toISOString().split('T')[0];
+    const endMonth = new Date(nextMonth);
+    endMonth.setMonth(endMonth.getMonth() + 1);
+    result.endDate = endMonth.toISOString().split('T')[0];
+  } else if (message.includes('从下星期') || message.includes('从下周')) {
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    result.startDate = nextWeek.toISOString().split('T')[0];
+    const endWeek = new Date(nextWeek);
+    endWeek.setDate(endWeek.getDate() + 21);
+    result.endDate = endWeek.toISOString().split('T')[0];
+  } else {
+    result.startDate = today.toISOString().split('T')[0];
+    const end = new Date(today);
+    end.setDate(end.getDate() + 30);
+    result.endDate = end.toISOString().split('T')[0];
+  }
+
+  return result;
+}
+
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -259,4 +366,4 @@ async function handleBookRequest(message, conversationState) {
   };
 }
 
-module.exports = { processMessage, handleBookRequest, parseIntent };
+module.exports = { processMessage, handleBookRequest, parseIntent, parseScheduleIntent };
