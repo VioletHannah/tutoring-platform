@@ -15,7 +15,9 @@
 **教师端**
 - ✅ 教师档案编辑（基本信息、擅长科目、个人简介、在线状态）
 - ✅ 头像与证书资质上传
+- ✅ 📄 教学材料上传与管理（证书、学历证明、教学经历等）
 - ✅ 🤖 AI 智能档案分析 — 自动生成教学风格标签与亮点总结
+- ✅ 🤖 AI 材料审核 — 上传材料后自动审核、评分、生成摘要
 - ✅ 预约管理（接受/拒绝/完成/取消预约）
 
 **学生端**
@@ -31,6 +33,8 @@
 - ✅ 多轮需求澄清 — AI 通过对话引导补全匹配条件
 - ✅ 智能教师匹配 — Agent 自动调用检索工具筛选 Top 3 教师
 - ✅ 教师卡片嵌入 — 聊天中直接展示匹配结果，支持一键预约
+- ✅ AI 自动排期 — 设置周频次、星期偏好、时间段，自动生成课表并批量预约
+- ✅ AI 材料审核 — 自动审核教师上传的资质材料，提炼亮点与风险标记
 
 ## 🛠️ 技术栈
 
@@ -58,7 +62,8 @@
 - **状态机对话管理** — 多阶段对话流程控制
 - **Tool Calling** — Agent 自动调用后端 API 完成搜索与预约
 - **档案分析** — 规则引擎提取教学风格标签与亮点
-- **🤖 AI 自动排期** — 支持自然语言解析排课需求（如"每周二周五晚上排数学课"）
+- **教材审核** — AI 自动审核教师上传的资质材料，生成摘要与评分
+- **🤖 AI 自动排期** — 按偏好条件（星期、时段、频次）自动生成推荐课表
 
 ## 📦 项目结构
 
@@ -81,18 +86,21 @@ tutoring-platform/
 ├── server/                     # 后端项目
 │   ├── src/
 │   │   ├── agents/            # 🤖 AI Agent 引擎
-│   │   │   ├── consultationAgent.js  # 对话引擎
-│   │   │   ├── conversation.js       # 会话状态管理
-│   │   │   └── profileAnalyzer.js    # 档案分析器
+│   │   │   ├── consultationAgent.js   # 对话引擎
+│   │   │   ├── conversation.js        # 会话状态管理
+│   │   │   ├── profileAnalyzer.js     # 档案分析器
+│   │   │   └── materialReviewAgent.js # 教材审核 Agent
 │   │   ├── config/            # 配置文件
-│   │   ├── controllers/       # 控制器（auth/teacher/booking/agent）
+│   │   ├── controllers/       # 控制器
 │   │   ├── middlewares/       # 中间件（auth/role/validator/errorHandler）
-│   │   ├── models/            # 数据模型（User/TeacherProfile/StudentProfile/Institution/Booking）
+│   │   ├── models/            # 数据模型（User/TeacherProfile/StudentProfile/Institution/Booking/TeacherMaterial）
 │   │   ├── routes/            # 路由定义
+│   │   ├── services/          # 业务服务（scheduleService 自动排课）
 │   │   ├── utils/             # 工具函数
 │   │   └── validators/        # Joi 验证规则
 │   ├── scripts/               # 工具脚本
-│   │   └── seed.js            # 种子数据脚本
+│   │   ├── seed.js            # 种子数据脚本（自动建表 + 填充测试数据）
+│   │   └── syncDb.js          # 数据库同步脚本
 │   └── package.json
 └── docs/                      # 文档
     └── API.md                 # API 接口文档
@@ -127,25 +135,71 @@ npm install
 
 ### 3. 配置数据库
 
+**方式一：Docker（推荐）**
+
+```bash
+docker run -d --name tutoring-mysql \
+  -e MYSQL_ROOT_PASSWORD=my_strong_password \
+  -e MYSQL_DATABASE=tutoring_db \
+  -p 3306:3306 \
+  mysql:8.0
+```
+
+**方式二：本地 MySQL**
+
 创建数据库：
 
 ```sql
-CREATE DATABASE tutoring_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE tutoring_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-配置后端环境变量：
+然后配置环境变量：
 
 ```bash
 cp server/.env.example server/.env
-# 编辑 server/.env，填入数据库连接信息
+# 编辑 server/.env，填入实际的数据库连接信息
+```
+
+`.env` 示例：
+
+```env
+NODE_ENV=development
+PORT=5000
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=tutoring_db
+DB_USER=root
+DB_PASSWORD=my_strong_password
+JWT_SECRET=your_secret_key
+JWT_EXPIRES_IN=7d
+UPLOAD_DIR=./uploads
+MAX_FILE_SIZE=5242880
+CLIENT_URL=http://localhost:5173
 ```
 
 ### 4. 初始化数据
 
+种子脚本会**自动检查并创建缺失的数据库表**，然后填充示例数据（2学生 + 6教师 + 1机构 + 预约记录 + 教师资质材料）。
+
 ```bash
 cd server
-npm run seed      # 填充示例数据（2学生 + 6教师 + 1机构 + 5预约）
+npm run seed
 ```
+
+执行成功后会输出：
+
+```
+🚀 开始填充示例数据...
+✅ 数据库连接成功
+🔄 同步数据库结构...
+✅ 数据库同步完成
+📝 创建用户和档案...
+📅 创建示例预约...
+📄 创建示例材料...
+🎉 示例数据填充完成！
+```
+
+> **提示**：种子脚本使用 `findOrCreate`，可重复运行而不会产生重复数据。每次运行也会自动同步数据库结构（创建缺失的表和列）。
 
 ### 5. 启动项目
 
@@ -173,18 +227,18 @@ npm run dev       # http://localhost:5173
 
 ## 🧪 测试账号
 
-种子脚本预置了以下账号，密码统一为 `password123`：
+种子脚本预置了以下账号，密码统一为 `password123`。同时为部分教师（王明哲、刘建国、陈雨涵、赵思远）生成了已审核通过的资质材料和 AI 分析标签。
 
 | 角色 | 账号 | 说明 |
 |------|------|------|
 | 学生 | zhang_parent@example.com | 张妈妈（初二学生家长） |
 | 学生 | li_parent@example.com | 李爸爸（小五学生家长） |
-| 教师 | wang_teacher@example.com | 王明哲 — 数学/物理 ¥120/小时 |
+| 教师 | wang_teacher@example.com | 王明哲 — 数学/物理 ¥120/小时, 硕士, 3年经验 |
 | 教师 | chen_teacher@example.com | 陈雨涵 — 英语/语文 ¥100/小时 |
-| 教师 | liu_teacher@example.com | 刘建国 — 化学/生物 ¥200/小时 博士 |
+| 教师 | liu_teacher@example.com | 刘建国 — 化学/生物 ¥200/小时, 博士, 5年经验 |
 | 教师 | zhao_teacher@example.com | 赵思远 — 计算机/数学 ¥80/小时 |
 | 教师 | sun_teacher@example.com | 孙美玲 — 物理/数学 ¥150/小时 |
-| 教师 | zhou_teacher@example.com | 周文博 — 数理化全能 ¥250/小时 |
+| 教师 | zhou_teacher@example.com | 周文博 — 数理化全能 ¥250/小时, 7年经验 |
 | 机构 | youxue@example.com | 优学教育培训中心 |
 
 ---
@@ -214,6 +268,10 @@ npm run dev       # http://localhost:5173
 | POST | /teachers/avatar | 上传头像 | 教师 |
 | POST | /teachers/certificates | 上传证书 | 教师 |
 | POST | /teachers/analyze-profile | 🤖 AI 分析档案 | 教师 |
+| POST | /teachers/materials | 📄 上传教学材料 | 教师 |
+| GET | /teachers/my-materials | 📄 获取我的材料列表 | 教师 |
+| GET | /teachers/:id/materials/public | 📄 获取教师公开材料 | 公开 |
+| POST | /teachers/materials/:id/review-again | 🤖 重新审核材料 | 教师 |
 
 ### 预约 (`/api/bookings`)
 
@@ -253,10 +311,19 @@ npm run dev       # http://localhost:5173
 ### 3. 前端 API 请求失败
 确保后端服务已启动，检查 `client/.env.development` 中的 `VITE_API_BASE_URL` 配置。
 
-### 4. 页面评价不显示
-赵老师（`/teachers/7`）有一条测试评价。其他教师的评价数来自种子数据预设，实际评价内容为空。可通过以下步骤添加：
-- 以学生身份登录，对已完成的课程提交评价
-- 或运行 `npm run seed` 扩展种子脚本
+### 4. 数据库表缺失或种子数据报错
+种子脚本 `npm run seed` 内置了 `sequelize.sync()`，会自动创建缺失的表和列。如果遇到 `Table doesn't exist` 错误，重新运行 `npm run seed` 即可。
+
+### 5. Docker MySQL 配置
+确保 Docker 容器正在运行：
+```bash
+docker ps | grep tutoring-mysql
+```
+如未启动：
+```bash
+docker start tutoring-mysql
+```
+使用 Docker 时 `.env` 中 `DB_HOST=localhost` 即可，Docker 会将 3306 端口映射到宿主机。
 
 ---
 
