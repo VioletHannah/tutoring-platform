@@ -3,7 +3,7 @@ const Joi = require('joi');
 const createBookingSchema = Joi.object({
   teacherId: Joi.number().integer().required(),
   subject: Joi.string().min(1).max(100).required(),
-  bookingDate: Joi.date().iso().min('now').required(),
+  bookingDate: Joi.date().iso().required(),
   startTime: Joi.string().pattern(/^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/).required(),
   endTime: Joi.string().pattern(/^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/).required(),
   location: Joi.string().max(255).optional(),
