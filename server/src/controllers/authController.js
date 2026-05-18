@@ -30,7 +30,7 @@ const register = async (req, res, next) => {
       phone,
       passwordHash,
       role,
-      status: role === 'admin' ? 'active' : 'pending'
+      status: 'active'
     });
 
     // Create role-specific profile

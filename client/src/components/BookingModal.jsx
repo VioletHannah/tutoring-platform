@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Form, Select, DatePicker, TimePicker, Input, message, Descriptions, Tag, Radio, Button, Table, Alert, Checkbox, Card } from 'antd';
+import { Modal, Form, Select, DatePicker, TimePicker, Input, InputNumber, message, Descriptions, Tag, Radio, Button, Table, Alert, Checkbox, Card } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useBookingStore } from '../store/bookingStore';
@@ -390,7 +390,7 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
             label="总课次数（可选）"
             tooltip="如果填写，将优先生成指定次数；如果不填，按日期范围和每周次数生成"
           >
-            <Input.Number min={1} style={{ width: '100%' }} placeholder="例如：8" />
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="例如：8" />
           </Form.Item>
 
           <Form.Item
