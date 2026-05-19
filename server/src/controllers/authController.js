@@ -134,7 +134,7 @@ const login = async (req, res, next) => {
 const getCurrentUser = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.user.userId, {
-      attributes: ['id', 'username', 'email', 'phone', 'role', 'status', 'createdAt'],
+      attributes: ['id', 'username', 'email', 'phone', 'role', 'status'],
       include: [
         {
           model: TeacherProfile,

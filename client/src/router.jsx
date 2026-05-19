@@ -7,11 +7,13 @@ import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import TeacherList from './pages/Teacher/TeacherList';
 import TeacherDetail from './pages/Teacher/TeacherDetail';
+import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import TeacherProfile from './pages/Teacher/TeacherProfile';
 import TeacherBookings from './pages/Teacher/TeacherBookings';
 import StudentDashboard from './pages/Student/StudentDashboard';
 import MyBookings from './pages/Student/MyBookings';
 import ChatPage from './pages/Chat/ChatPage';
+import TeacherChat from './pages/Chat/TeacherChat';
 
 export const router = createBrowserRouter([
   {
@@ -40,7 +42,35 @@ export const router = createBrowserRouter([
       },
       {
         path: 'chat',
-        element: <ChatPage />
+        element: (
+          <PrivateRoute requireRole="student">
+            <ChatPage />
+          </PrivateRoute>
+        )
+      },
+      {
+        path: 'messages',
+        element: (
+          <PrivateRoute>
+            <TeacherChat />
+          </PrivateRoute>
+        )
+      },
+      {
+        path: 'messages/teachers/:teacherId',
+        element: (
+          <PrivateRoute>
+            <TeacherChat />
+          </PrivateRoute>
+        )
+      },
+      {
+        path: 'messages/students/:studentId',
+        element: (
+          <PrivateRoute>
+            <TeacherChat />
+          </PrivateRoute>
+        )
       },
       {
         path: 'student',
@@ -66,6 +96,14 @@ export const router = createBrowserRouter([
       {
         path: 'teacher',
         children: [
+          {
+            path: 'dashboard',
+            element: (
+              <PrivateRoute requireRole="teacher">
+                <TeacherDashboard />
+              </PrivateRoute>
+            )
+          },
           {
             path: 'profile',
             element: (

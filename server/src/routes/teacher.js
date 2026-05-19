@@ -11,12 +11,14 @@ const {
   searchTeachersSchema
 } = require('../validators/teacherValidator');
 
-// Public routes
-router.get('/', optionalAuth, validate(searchTeachersSchema, 'query'), teacherController.searchTeachers);
-router.get('/:id/reviews', optionalAuth, teacherController.getTeacherReviews);
-router.get('/:id', optionalAuth, teacherController.getTeacherById);
-
 // Protected teacher routes
+router.get(
+  '/my-profile',
+  authenticate,
+  authorize('teacher'),
+  teacherController.getMyProfile
+);
+
 router.post(
   '/profile',
   authenticate,
@@ -31,13 +33,6 @@ router.put(
   authorize('teacher'),
   validate(updateTeacherProfileSchema),
   teacherController.createOrUpdateProfile
-);
-
-router.get(
-  '/my-profile',
-  authenticate,
-  authorize('teacher'),
-  teacherController.getMyProfile
 );
 
 router.post(
@@ -62,5 +57,10 @@ router.post(
   authorize('teacher'),
   teacherController.analyzeProfile
 );
+
+// Public routes
+router.get('/', optionalAuth, validate(searchTeachersSchema, 'query'), teacherController.searchTeachers);
+router.get('/:id/reviews', optionalAuth, teacherController.getTeacherReviews);
+router.get('/:id', optionalAuth, teacherController.getTeacherById);
 
 module.exports = router;

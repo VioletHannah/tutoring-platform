@@ -251,6 +251,12 @@ const createSampleBookings = async (users) => {
     return fmt(d);
   };
 
+  const pastDate = (daysAgo) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - daysAgo);
+    return fmt(d);
+  };
+
   const sampleBookings = [
     {
       studentId: students[0].id,
@@ -300,7 +306,9 @@ const createSampleBookings = async (users) => {
       location: '线上腾讯会议',
       note: '零基础小学生，想学Scratch入门',
       status: 'completed',
-      totalAmount: 160
+      totalAmount: 160,
+      studentRating: 5,
+      studentReview: '老师讲 Scratch 很有耐心，孩子第一次做出小游戏特别开心。'
     },
     {
       studentId: students[0].id,
@@ -313,11 +321,95 @@ const createSampleBookings = async (users) => {
       note: '初二物理，孩子说力学部分听课听不懂',
       status: 'pending',
       totalAmount: 500
+    },
+    {
+      studentId: students[0].id,
+      teacherId: teachers[0].id,
+      subject: '数学',
+      bookingDate: pastDate(12),
+      startTime: '19:00:00',
+      endTime: '21:00:00',
+      location: '线上腾讯会议',
+      note: '复习一次函数和几何辅助线',
+      status: 'completed',
+      totalAmount: 240,
+      studentRating: 5,
+      studentReview: '王老师把解题步骤拆得很清楚，课后练习也很有针对性。'
+    },
+    {
+      studentId: students[1].id,
+      teacherId: teachers[0].id,
+      subject: '物理',
+      bookingDate: pastDate(8),
+      startTime: '18:30:00',
+      endTime: '20:00:00',
+      location: '线上腾讯会议',
+      note: '力学基础巩固',
+      status: 'completed',
+      totalAmount: 180,
+      studentRating: 4,
+      studentReview: '用生活里的例子讲受力分析，孩子更容易理解了。'
+    },
+    {
+      studentId: students[0].id,
+      teacherId: teachers[1].id,
+      subject: '英语',
+      bookingDate: pastDate(10),
+      startTime: '10:00:00',
+      endTime: '11:30:00',
+      location: '线上腾讯会议',
+      note: 'KET 口语模拟',
+      status: 'completed',
+      totalAmount: 150,
+      studentRating: 5,
+      studentReview: '课堂互动很多，孩子开口说英语比以前自然了。'
+    },
+    {
+      studentId: students[1].id,
+      teacherId: teachers[2].id,
+      subject: '化学',
+      bookingDate: pastDate(6),
+      startTime: '19:00:00',
+      endTime: '21:00:00',
+      location: '线上钉钉',
+      note: '化学方程式专题',
+      status: 'completed',
+      totalAmount: 400,
+      studentRating: 5,
+      studentReview: '刘老师先讲原理再练题，配平错误明显少了。'
+    },
+    {
+      studentId: students[0].id,
+      teacherId: teachers[4].id,
+      subject: '物理',
+      bookingDate: pastDate(5),
+      startTime: '18:00:00',
+      endTime: '20:00:00',
+      location: '线下 - 学生家中',
+      note: '初二力学入门',
+      status: 'completed',
+      totalAmount: 300,
+      studentRating: 5,
+      studentReview: '孙老师会带着孩子画图分析，抽象的力学概念一下子清楚了。'
+    },
+    {
+      studentId: students[1].id,
+      teacherId: teachers[5].id,
+      subject: '数学',
+      bookingDate: pastDate(14),
+      startTime: '15:00:00',
+      endTime: '17:00:00',
+      location: '线下 - 机构教室',
+      note: '中考压轴题思路训练',
+      status: 'completed',
+      totalAmount: 500,
+      studentRating: 5,
+      studentReview: '周老师节奏很稳，能快速指出孩子卡住的地方。'
     }
   ];
 
   for (const booking of sampleBookings) {
-    const [created] = await Booking.findOrCreate({
+    const [bookingRecord, created] = await Booking.findOrCreate({
       where: {
         studentId: booking.studentId,
         teacherId: booking.teacherId,
@@ -326,9 +418,45 @@ const createSampleBookings = async (users) => {
       },
       defaults: booking
     });
+
+    if (!created && booking.studentRating !== undefined) {
+      await bookingRecord.update({
+        status: booking.status,
+        totalAmount: booking.totalAmount,
+        studentRating: booking.studentRating,
+        studentReview: booking.studentReview
+      });
+    }
+
     const studentUser = users.find(u => u.id === booking.studentId);
     const teacherUser = users.find(u => u.id === booking.teacherId);
     console.log(`  ${created ? '✅' : '⏭'} 预约: ${studentUser?.username} → ${teacherUser?.username} (${booking.subject}) [${booking.status}]`);
+  }
+};
+
+const syncTeacherReviewStats = async (users) => {
+  const teachers = users.filter(u => u.role === 'teacher');
+
+  for (const teacher of teachers) {
+    const reviews = await Booking.findAll({
+      where: { teacherId: teacher.id },
+      attributes: ['studentRating'],
+      raw: true
+    });
+    const ratedReviews = reviews.filter(review => review.studentRating !== null);
+    const totalReviews = ratedReviews.length;
+    const rating = totalReviews
+      ? Math.round(
+        (ratedReviews.reduce((sum, review) => sum + Number(review.studentRating), 0) / totalReviews) * 100
+      ) / 100
+      : 0;
+
+    await TeacherProfile.update(
+      { rating, totalReviews },
+      { where: { userId: teacher.id } }
+    );
+
+    console.log(`  ↻ 评价统计: ${teacher.username} ${rating} 分 / ${totalReviews} 条`);
   }
 };
 
@@ -501,6 +629,9 @@ const main = async () => {
 
     console.log('\n📅 创建示例预约...');
     await createSampleBookings(users);
+
+    console.log('\n⭐ 同步教师评价统计...');
+    await syncTeacherReviewStats(users);
 
     console.log('\n📄 创建示例材料...');
     await createSampleMaterials(users);

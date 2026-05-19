@@ -81,7 +81,11 @@ const MyBookings = () => {
       title: '教师',
       dataIndex: ['teacher', 'fullName'],
       key: 'teacher',
-      render: (text, record) => text || `教师#${record.teacherId}`
+      render: (_, record) => (
+        record.teacher?.teacherProfile?.fullName ||
+        record.teacher?.username ||
+        `教师#${record.teacherId}`
+      )
     },
     {
       title: '科目',
@@ -139,6 +143,11 @@ const MyBookings = () => {
           {record.status === BOOKING_STATUS.REJECTED && (
             <Button type="link" size="small" onClick={() => navigate(`/teachers/${record.teacherId}`)}>
               重新选择教师
+            </Button>
+          )}
+          {record.status === BOOKING_STATUS.CANCELLED && (
+            <Button type="link" size="small" onClick={() => navigate(`/teachers/${record.teacherId}`)}>
+              重新预约
             </Button>
           )}
         </Space>

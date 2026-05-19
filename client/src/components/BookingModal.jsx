@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Modal, Form, Select, DatePicker, TimePicker, Input, InputNumber, message, Descriptions, Tag, Radio, Button, Table, Alert, Checkbox, Card } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import { useBookingStore } from '../store/bookingStore';
 import { SUBJECTS, WEEKDAY_OPTIONS, DURATION_OPTIONS, SESSIONS_PER_WEEK_OPTIONS, TIME_RANGE_PRESETS } from '../utils/constants';
 
 const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
+  const navigate = useNavigate();
   const [manualForm] = Form.useForm();
   const [scheduleForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -15,12 +17,35 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
   const [generatedSummary, setGeneratedSummary] = useState(null);
 
   const { createBooking, suggestSchedule, confirmSchedule } = useBookingStore();
+  const subjects = teacher?.subjects?.length ? teacher.subjects : SUBJECTS;
+  const subjectInitialValue = subjects.length > 0 ? [subjects[0]] : undefined;
+
+  const normalizeSubject = (subject) => (
+    Array.isArray(subject) ? subject.join('、') : subject
+  );
+
+  const getSubjectValue = (subject) => normalizeSubject(subject) || subjects[0];
+
+  const showBookingSuccess = (description) => {
+    Modal.success({
+      title: '预约请求已提交',
+      content: (
+        <div>
+          <p style={{ marginBottom: 12 }}>{description}</p>
+          <Button type="primary" onClick={() => navigate('/student/bookings')}>
+            查看我的预约
+          </Button>
+        </div>
+      ),
+      okText: '知道了'
+    });
+  };
 
   const handleManualSubmit = async (values) => {
     setLoading(true);
     const data = {
-      teacherId: teacher.userId,
-      subject: values.subject,
+      teacherId: Number(teacher.userId),
+      subject: getSubjectValue(values.subject),
       bookingDate: values.bookingDate.format('YYYY-MM-DD'),
       startTime: values.startTime.format('HH:mm:ss'),
       endTime: values.endTime.format('HH:mm:ss'),
@@ -32,7 +57,7 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
     setLoading(false);
 
     if (result.success) {
-      message.success('预约请求已发送，请等待教师确认');
+      showBookingSuccess('预约请求已发送，请等待教师确认。您可以进入“我的预约”查看状态。');
       handleClose();
       onSuccess?.();
     } else {
@@ -50,8 +75,8 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
     });
 
     const data = {
-      teacherId: teacher.userId,
-      subject: values.subject,
+      teacherId: Number(teacher.userId),
+      subject: getSubjectValue(values.subject),
       startDate: values.startDate.format('YYYY-MM-DD'),
       endDate: values.endDate.format('YYYY-MM-DD'),
       durationMinutes: values.durationMinutes,
@@ -85,7 +110,14 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
     }
 
     setLoading(true);
-    const values = await scheduleForm.validateFields();
+
+    let values;
+    try {
+      values = await scheduleForm.validateFields();
+    } catch {
+      setLoading(false);
+      return;
+    }
 
     const scheduleItems = selectedSuggestionIndices.map(i => ({
       bookingDate: suggestions[i].bookingDate,
@@ -94,10 +126,10 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
     }));
 
     const data = {
-      teacherId: teacher.userId,
-      subject: values.confirmSubject || values.subject,
+      teacherId: Number(teacher.userId),
+      subject: getSubjectValue(values.subject),
       scheduleItems,
-      location: values.confirmLocation || values.location,
+      location: values.confirmLocation || values.location || undefined,
       note: values.confirmNote || values.note || 'AI 自动排期'
     };
 
@@ -105,7 +137,7 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
     setLoading(false);
 
     if (result.success) {
-      message.success(`成功创建 ${result.bookings?.length || 0} 个预约请求，请等待教师确认`);
+      showBookingSuccess(`成功创建 ${result.bookings?.length || 0} 个预约请求，请等待教师确认。您可以进入”我的预约”查看状态。`);
       handleClose();
       onSuccess?.();
     } else {
@@ -144,8 +176,6 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
       setSelectedSuggestionIndices([]);
     }
   };
-
-  const subjects = teacher?.subjects?.length ? teacher.subjects : SUBJECTS;
 
   const suggestionColumns = [
     {
@@ -226,13 +256,18 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
       </Radio.Group>
 
       {bookingMode === 'manual' ? (
-        <Form form={manualForm} layout="vertical" onFinish={handleManualSubmit}>
+        <Form
+          form={manualForm}
+          layout="vertical"
+          initialValues={{ subject: subjectInitialValue }}
+          onFinish={handleManualSubmit}
+        >
           <Form.Item
             name="subject"
             label="辅导科目"
-            rules={[{ required: true, message: '请选择辅导科目' }]}
+            rules={[{ type: 'array', required: true, min: 1, message: '请选择辅导科目' }]}
           >
-            <Select placeholder="选择科目" showSearch>
+            <Select mode="multiple" placeholder="选择科目" showSearch>
               {subjects.map(s => (
                 <Select.Option key={s} value={s}>{s}</Select.Option>
               ))}
@@ -255,7 +290,7 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
             label="开始时间"
             rules={[{ required: true, message: '请选择开始时间' }]}
           >
-            <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={30} />
+            <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={10} />
           </Form.Item>
 
           <Form.Item
@@ -263,7 +298,7 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
             label="结束时间"
             rules={[{ required: true, message: '请选择结束时间' }]}
           >
-            <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={30} />
+            <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={10} />
           </Form.Item>
 
           <Form.Item
@@ -287,13 +322,18 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
           </Form.Item>
         </Form>
       ) : (
-        <Form form={scheduleForm} layout="vertical" onFinish={handleGenerateSchedule}>
+        <Form
+          form={scheduleForm}
+          layout="vertical"
+          initialValues={{ subject: subjectInitialValue }}
+          onFinish={handleGenerateSchedule}
+        >
           <Form.Item
             name="subject"
             label="辅导科目"
-            rules={[{ required: true, message: '请选择辅导科目' }]}
+            rules={[{ type: 'array', required: true, min: 1, message: '请选择辅导科目' }]}
           >
-            <Select placeholder="选择科目" showSearch>
+            <Select mode="multiple" placeholder="选择科目" showSearch>
               {subjects.map(s => (
                 <Select.Option key={s} value={s}>{s}</Select.Option>
               ))}
@@ -352,12 +392,12 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
             name="preferredWeekdays"
             label="可接受的星期"
             rules={[{ required: true, message: '请至少选择一个星期' }]}
+            initialValue={[6, 7]}
           >
             <Select
               mode="multiple"
               placeholder="选择可接受的星期（默认周六、周日）"
               style={{ width: '100%' }}
-              defaultValue={[6, 7]}
             >
               {WEEKDAY_OPTIONS.map(d => (
                 <Select.Option key={d.value} value={d.value}>{d.label}</Select.Option>
@@ -424,7 +464,22 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
                 />
               )}
 
-              <Card title="推荐课表" size="small" style={{ marginBottom: 16 }}>
+              <Card
+                title={
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>推荐课表</span>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => toggleAllSuggestions(selectedSuggestionIndices.length !== suggestions.length)}
+                    >
+                      {selectedSuggestionIndices.length === suggestions.length ? '取消全选' : '全选'}
+                    </Button>
+                  </div>
+                }
+                size="small"
+                style={{ marginBottom: 16 }}
+              >
                 <Table
                   columns={suggestionColumns}
                   dataSource={suggestions.map((s, i) => ({ ...s, key: i, selected: selectedSuggestionIndices.includes(i) }))}
@@ -442,19 +497,6 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
                   style={{ marginBottom: 16 }}
                 />
               )}
-
-              <Form.Item
-                name="confirmSubject"
-                label="确认科目"
-                rules={[{ required: true, message: '请确认科目' }]}
-                initialValue={scheduleForm.getFieldValue('subject')}
-              >
-                <Select placeholder="确认科目">
-                  {subjects.map(s => (
-                    <Select.Option key={s} value={s}>{s}</Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
 
               <Form.Item
                 name="confirmLocation"

@@ -15,6 +15,13 @@ const validate = (schema, property = 'body') => {
 
     if (error) {
       const errors = error.details.map(detail => detail.message);
+      console.error('Validation error:', {
+        method: req.method,
+        path: req.originalUrl,
+        property,
+        errors,
+        payload: req[property]
+      });
       return sendError(res, 'Validation error', 400, errors);
     }
 

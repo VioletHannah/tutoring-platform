@@ -59,10 +59,10 @@ router.put(
   bookingController.completeBooking
 );
 
-// Cancel booking (student or teacher)
+// Cancel booking (students only)
 router.put(
   '/:id/cancel',
-  authorize('student', 'teacher'),
+  authorize('student'),
   bookingController.cancelBooking
 );
 

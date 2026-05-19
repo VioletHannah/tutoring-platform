@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Table, Tag, Button, Select, message, Modal, Space, Input, Typography, Empty } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { MessageOutlined, SearchOutlined } from '@ant-design/icons';
 import { useBookingStore } from '../../store/bookingStore';
 import { BOOKING_STATUS, BOOKING_STATUS_LABELS } from '../../utils/constants';
 
 const { Title } = Typography;
 
 const TeacherBookings = () => {
-  const { bookings, pagination, loading, getMyBookings, acceptBooking, rejectBooking, completeBooking, cancelBooking } = useBookingStore();
+  const navigate = useNavigate();
+  const { bookings, pagination, loading, getMyBookings, acceptBooking, rejectBooking, completeBooking } = useBookingStore();
   const [statusFilter, setStatusFilter] = useState(undefined);
   const [page, setPage] = useState(1);
 
@@ -93,24 +95,6 @@ const TeacherBookings = () => {
     });
   };
 
-  const handleCancel = (id) => {
-    Modal.confirm({
-      title: '确认取消预约',
-      content: '取消后该预约将标记为已取消。',
-      okText: '确认取消',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        const result = await cancelBooking(id);
-        if (result.success) {
-          message.success('预约已取消');
-          fetchBookings();
-        } else {
-          message.error(result.error?.response?.data?.message || '操作失败');
-        }
-      }
-    });
-  };
-
   const statusColor = (status) => {
     const map = { pending: 'orange', accepted: 'blue', rejected: 'red', completed: 'green', cancelled: 'default' };
     return map[status] || 'default';
@@ -123,11 +107,7 @@ const TeacherBookings = () => {
       key: 'student',
       render: (text, record) => {
         const student = record.student;
-        return student ? (
-          <span>{student.username} ({student.email})</span>
-        ) : (
-          `用户#${record.studentId}`
-        );
+        return student?.username || `用户#${record.studentId}`;
       }
     },
     {
@@ -170,6 +150,14 @@ const TeacherBookings = () => {
         <Space wrap>
           {record.status === BOOKING_STATUS.PENDING && (
             <>
+              <Button
+                type="link"
+                size="small"
+                icon={<MessageOutlined />}
+                onClick={() => navigate(`/messages/students/${record.studentId}`)}
+              >
+                沟通
+              </Button>
               <Button type="link" size="small" onClick={() => handleAccept(record.id)}>
                 接受
               </Button>
@@ -179,18 +167,8 @@ const TeacherBookings = () => {
             </>
           )}
           {record.status === BOOKING_STATUS.ACCEPTED && (
-            <>
-              <Button type="link" size="small" onClick={() => handleComplete(record.id)}>
-                完成
-              </Button>
-              <Button type="link" size="small" danger onClick={() => handleCancel(record.id)}>
-                取消
-              </Button>
-            </>
-          )}
-          {record.status === BOOKING_STATUS.PENDING && (
-            <Button type="link" size="small" danger onClick={() => handleCancel(record.id)}>
-              取消
+            <Button type="link" size="small" onClick={() => handleComplete(record.id)}>
+              完成
             </Button>
           )}
         </Space>

@@ -1,6 +1,18 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 
+const parseJsonArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+};
+
 const TeacherMaterial = sequelize.define('TeacherMaterial', {
   id: {
     type: DataTypes.INTEGER,
@@ -65,8 +77,7 @@ const TeacherMaterial = sequelize.define('TeacherMaterial', {
     field: 'ai_tags',
     comment: 'JSON 数组，AI 标签',
     get() {
-      const rawValue = this.getDataValue('aiTags');
-      return rawValue ? JSON.parse(rawValue) : [];
+      return parseJsonArray(this.getDataValue('aiTags'));
     },
     set(value) {
       this.setDataValue('aiTags', JSON.stringify(value || []));
@@ -78,8 +89,7 @@ const TeacherMaterial = sequelize.define('TeacherMaterial', {
     field: 'ai_highlights',
     comment: 'JSON 数组，AI 亮点提炼',
     get() {
-      const rawValue = this.getDataValue('aiHighlights');
-      return rawValue ? JSON.parse(rawValue) : [];
+      return parseJsonArray(this.getDataValue('aiHighlights'));
     },
     set(value) {
       this.setDataValue('aiHighlights', JSON.stringify(value || []));
@@ -91,8 +101,7 @@ const TeacherMaterial = sequelize.define('TeacherMaterial', {
     field: 'ai_risk_flags',
     comment: 'JSON 数组，AI 风险标记',
     get() {
-      const rawValue = this.getDataValue('aiRiskFlags');
-      return rawValue ? JSON.parse(rawValue) : [];
+      return parseJsonArray(this.getDataValue('aiRiskFlags'));
     },
     set(value) {
       this.setDataValue('aiRiskFlags', JSON.stringify(value || []));

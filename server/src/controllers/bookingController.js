@@ -155,12 +155,19 @@ const getMyBookings = async (req, res, next) => {
         {
           model: User,
           as: 'student',
-          attributes: ['id', 'username', 'email']
+          attributes: ['id', 'username']
         },
         {
           model: User,
           as: 'teacher',
-          attributes: ['id', 'username', 'email']
+          attributes: ['id', 'username'],
+          include: [
+            {
+              model: TeacherProfile,
+              as: 'teacherProfile',
+              attributes: ['userId', 'fullName']
+            }
+          ]
         }
       ],
       order: [['bookingDate', 'DESC'], ['startTime', 'DESC']],
@@ -196,12 +203,19 @@ const getBookingById = async (req, res, next) => {
         {
           model: User,
           as: 'student',
-          attributes: ['id', 'username', 'email']
+          attributes: ['id', 'username']
         },
         {
           model: User,
           as: 'teacher',
-          attributes: ['id', 'username', 'email']
+          attributes: ['id', 'username'],
+          include: [
+            {
+              model: TeacherProfile,
+              as: 'teacherProfile',
+              attributes: ['userId', 'fullName']
+            }
+          ]
         }
       ]
     });
@@ -322,8 +336,8 @@ const cancelBooking = async (req, res, next) => {
       return sendError(res, 'Booking not found', 404);
     }
 
-    // Check permission
-    if (booking.studentId !== userId && booking.teacherId !== userId) {
+    // Only the student who created the booking can cancel it.
+    if (booking.studentId !== userId) {
       return sendError(res, 'Access denied', 403);
     }
 

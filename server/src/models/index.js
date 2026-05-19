@@ -4,6 +4,8 @@ const StudentProfile = require('./StudentProfile');
 const Institution = require('./Institution');
 const Booking = require('./Booking');
 const TeacherMaterial = require('./TeacherMaterial');
+const ChatThread = require('./ChatThread');
+const ChatMessage = require('./ChatMessage');
 
 // Define associations
 // User - TeacherProfile (1:1)
@@ -72,11 +74,52 @@ TeacherMaterial.belongsTo(TeacherProfile, {
   targetKey: 'userId'
 });
 
+// User - ChatThread relationships
+User.hasMany(ChatThread, {
+  foreignKey: 'studentId',
+  as: 'studentChatThreads'
+});
+ChatThread.belongsTo(User, {
+  foreignKey: 'studentId',
+  as: 'student'
+});
+
+User.hasMany(ChatThread, {
+  foreignKey: 'teacherId',
+  as: 'teacherChatThreads'
+});
+ChatThread.belongsTo(User, {
+  foreignKey: 'teacherId',
+  as: 'teacher'
+});
+
+// ChatThread - ChatMessage relationships
+ChatThread.hasMany(ChatMessage, {
+  foreignKey: 'threadId',
+  as: 'messages',
+  onDelete: 'CASCADE'
+});
+ChatMessage.belongsTo(ChatThread, {
+  foreignKey: 'threadId',
+  as: 'thread'
+});
+
+User.hasMany(ChatMessage, {
+  foreignKey: 'senderId',
+  as: 'sentChatMessages'
+});
+ChatMessage.belongsTo(User, {
+  foreignKey: 'senderId',
+  as: 'sender'
+});
+
 module.exports = {
   User,
   TeacherProfile,
   StudentProfile,
   Institution,
   Booking,
-  TeacherMaterial
+  TeacherMaterial,
+  ChatThread,
+  ChatMessage
 };

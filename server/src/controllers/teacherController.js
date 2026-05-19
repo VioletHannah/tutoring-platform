@@ -1,6 +1,41 @@
 const { Op } = require('sequelize');
-const { User, TeacherProfile } = require('../models');
+const { User, TeacherProfile, Booking } = require('../models');
 const { sendSuccess, sendError } = require('../utils/response');
+
+const getTeacherReviewStats = async (teacherId) => {
+  const reviewRows = await Booking.findAll({
+    where: {
+      teacherId,
+      studentRating: { [Op.ne]: null }
+    },
+    attributes: ['studentRating'],
+    raw: true
+  });
+
+  const totalReviews = reviewRows.length;
+  if (totalReviews === 0) {
+    return { rating: 0, totalReviews: 0 };
+  }
+
+  const totalRating = reviewRows.reduce(
+    (sum, row) => sum + Number(row.studentRating || 0),
+    0
+  );
+
+  return {
+    rating: Math.round((totalRating / totalReviews) * 100) / 100,
+    totalReviews
+  };
+};
+
+const attachLiveReviewStats = async (profile) => {
+  const data = profile.toJSON();
+  const reviewStats = await getTeacherReviewStats(data.userId);
+  return {
+    ...data,
+    ...reviewStats
+  };
+};
 
 /**
  * Create or update teacher profile
@@ -44,18 +79,35 @@ const createOrUpdateProfile = async (req, res, next) => {
 const getMyProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId;
+    const includeUser = [{
+      model: User,
+      as: 'user',
+      attributes: ['id', 'username', 'email', 'phone', 'status']
+    }];
 
-    const profile = await TeacherProfile.findOne({
+    let profile = await TeacherProfile.findOne({
       where: { userId },
-      include: [{
-        model: User,
-        as: 'user',
-        attributes: ['id', 'username', 'email', 'phone', 'status']
-      }]
+      include: includeUser
     });
 
     if (!profile) {
-      return sendError(res, 'Teacher profile not found', 404);
+      const user = await User.findByPk(userId, {
+        attributes: ['id', 'username', 'email', 'phone', 'status']
+      });
+
+      if (!user) {
+        return sendError(res, 'User not found', 404);
+      }
+
+      await TeacherProfile.create({
+        userId,
+        fullName: user.username
+      });
+
+      profile = await TeacherProfile.findOne({
+        where: { userId },
+        include: includeUser
+      });
     }
 
     sendSuccess(res, profile, 'Profile retrieved successfully');
@@ -86,7 +138,9 @@ const getTeacherById = async (req, res, next) => {
       return sendError(res, 'Teacher not found', 404);
     }
 
-    sendSuccess(res, profile, 'Teacher retrieved successfully');
+    const profileWithReviewStats = await attachLiveReviewStats(profile);
+
+    sendSuccess(res, profileWithReviewStats, 'Teacher retrieved successfully');
   } catch (error) {
     next(error);
   }
@@ -155,8 +209,12 @@ const searchTeachers = async (req, res, next) => {
       offset: parseInt(offset)
     });
 
+    const teachersWithReviewStats = await Promise.all(
+      teachers.map(attachLiveReviewStats)
+    );
+
     sendSuccess(res, {
-      teachers,
+      teachers: teachersWithReviewStats,
       pagination: {
         total: count,
         page: parseInt(page),
@@ -261,7 +319,6 @@ const analyzeProfile = async (req, res, next) => {
 const getTeacherReviews = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { Booking, User } = require('../models');
 
     const reviews = await Booking.findAll({
       where: {

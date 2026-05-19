@@ -23,6 +23,24 @@ const MATERIAL_TYPE_ICON_ELEMENTS = {
   other: <PaperClipOutlined />
 };
 
+const toArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // Fall through and show the stored text as a single tag.
+    }
+
+    return [value];
+  }
+
+  return [];
+};
+
 const TeacherProfile = () => {
   const [form] = Form.useForm();
   const { myProfile, loading, getMyProfile, saveProfile } = useTeacherStore();
@@ -234,14 +252,18 @@ const TeacherProfile = () => {
       dataIndex: 'aiTags',
       key: 'aiTags',
       width: 180,
-      render: (tags) => (
-        <span>
-          {(tags || []).slice(0, 3).map((tag, i) => (
-            <Tag key={i} color="blue" style={{ marginBottom: 2 }}>{tag}</Tag>
-          ))}
-          {(tags || []).length > 3 && <Tag color="default">+{tags.length - 3}</Tag>}
-        </span>
-      )
+      render: (value) => {
+        const tagList = toArray(value);
+
+        return (
+          <span>
+            {tagList.slice(0, 3).map((tag, i) => (
+              <Tag key={i} color="blue" style={{ marginBottom: 2 }}>{tag}</Tag>
+            ))}
+            {tagList.length > 3 && <Tag color="default">+{tagList.length - 3}</Tag>}
+          </span>
+        );
+      }
     },
     {
       title: '操作',
@@ -430,7 +452,7 @@ const TeacherProfile = () => {
                   <div>
                     <div style={{ marginBottom: 8 }}>{highlights}</div>
                     <div>
-                      {tags.map((tag, i) => <Tag key={i} color="blue">{tag}</Tag>)}
+                      {toArray(tags).map((tag, i) => <Tag key={i} color="blue">{tag}</Tag>)}
                     </div>
                   </div>
                 }

@@ -19,3 +19,21 @@ body {
 #root {
   min-height: 100vh;
 }
+
+.teacher-chat-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  height: calc(100vh - 182px);
+}
+
+@media (max-width: 768px) {
+  .teacher-chat-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .teacher-chat-layout > * {
+    min-height: 420px;
+  }
+}

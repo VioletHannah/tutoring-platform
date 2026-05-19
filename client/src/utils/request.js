@@ -3,7 +3,6 @@ import { message } from 'antd';
 import { authUtils } from './auth';
 import { API_BASE_URL } from './constants';
 
-// Create axios instance
 const request = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
@@ -12,10 +11,18 @@ const request = axios.create({
   }
 });
 
-// Request interceptor
+const getErrorText = (data, fallback = '请求失败') => {
+  if (!data) return fallback;
+
+  const details = Array.isArray(data.errors) && data.errors.length > 0
+    ? data.errors.join('; ')
+    : '';
+
+  return details ? `${data.message || fallback}: ${details}` : (data.message || fallback);
+};
+
 request.interceptors.request.use(
   (config) => {
-    // Add token to headers
     const token = authUtils.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -28,47 +35,43 @@ request.interceptors.request.use(
   }
 );
 
-// Response interceptor
 request.interceptors.response.use(
   (response) => {
     const res = response.data;
 
-    // If the custom code is not success, it is judged as an error
     if (!res.success) {
-      message.error(res.message || 'Error');
-      return Promise.reject(new Error(res.message || 'Error'));
+      const errorText = getErrorText(res, 'Error');
+      message.error(errorText);
+      return Promise.reject(new Error(errorText));
     }
 
     return res;
   },
   (error) => {
-    console.error('Response error:', error);
+    console.error('Response error:', {
+      message: error.message,
+      url: error.config?.url,
+      method: error.config?.method,
+      requestData: error.config?.data,
+      status: error.response?.status,
+      responseData: error.response?.data
+    });
 
     if (error.response) {
       const { status, data } = error.response;
+      const errorText = getErrorText(data);
 
-      switch (status) {
-        case 401:
-          message.error('未授权，请重新登录');
-          authUtils.clearAuth();
-          window.location.href = '/login';
-          break;
-        case 403:
-          message.error('拒绝访问');
-          break;
-        case 404:
-          message.error('请求的资源不存在');
-          break;
-        case 500:
-          message.error('服务器错误');
-          break;
-        default:
-          message.error(data?.message || '请求失败');
+      if (status === 401) {
+        message.error(errorText || '未授权，请重新登录');
+        authUtils.clearAuth();
+        window.location.href = '/login';
+      } else {
+        message.error(errorText);
       }
     } else if (error.request) {
       message.error('网络错误，请检查您的连接');
     } else {
-      message.error('请求失败');
+      message.error(error.message || '请求失败');
     }
 
     return Promise.reject(error);

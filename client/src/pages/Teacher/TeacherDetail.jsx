@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Row, Col, Avatar, Tag, Button, Descriptions, Image, Spin, Empty, Rate, Divider, Typography, List, Alert, Space } from 'antd';
-import { UserOutlined, ClockCircleOutlined, DollarOutlined, BookOutlined, CheckCircleOutlined, RobotOutlined, CommentOutlined, SafetyCertificateOutlined, BankOutlined, ExperimentOutlined, ReadOutlined, PaperClipOutlined, FileTextOutlined } from '@ant-design/icons';
+import { UserOutlined, ClockCircleOutlined, DollarOutlined, BookOutlined, CheckCircleOutlined, RobotOutlined, CommentOutlined, SafetyCertificateOutlined, BankOutlined, ExperimentOutlined, ReadOutlined, PaperClipOutlined, FileTextOutlined, MessageOutlined } from '@ant-design/icons';
 import { useTeacherStore } from '../../store/teacherStore';
 import { useAuthStore } from '../../store/authStore';
 import { teacherAPI } from '../../api';
@@ -21,6 +21,7 @@ const MATERIAL_TYPE_ICONS = {
 const TeacherDetail = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentTeacher, loading, getTeacherById } = useTeacherStore();
   const { isAuthenticated, user } = useAuthStore();
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -36,6 +37,20 @@ const TeacherDetail = () => {
       fetchPublicMaterials(userId);
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (
+      searchParams.get('book') === '1' &&
+      isAuthenticated &&
+      user?.role === USER_ROLES.STUDENT &&
+      currentTeacher?.userId
+    ) {
+      setBookingOpen(true);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('book');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, isAuthenticated, user?.role, currentTeacher?.userId]);
 
   const fetchReviews = async (id) => {
     setReviewsLoading(true);
@@ -81,15 +96,30 @@ const TeacherDetail = () => {
 
   const teacher = currentTeacher;
 
+  const getRegisterPath = (intent) => (
+    `/register?role=${USER_ROLES.STUDENT}&intent=${intent}&teacherId=${teacher.userId}`
+  );
+
   const handleBookClick = () => {
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate(getRegisterPath('book'));
       return;
     }
     if (user?.role !== USER_ROLES.STUDENT) {
       return;
     }
     setBookingOpen(true);
+  };
+
+  const handleChatClick = () => {
+    if (!isAuthenticated) {
+      navigate(getRegisterPath('chat'));
+      return;
+    }
+    if (user?.role !== USER_ROLES.STUDENT) {
+      return;
+    }
+    navigate(`/messages/teachers/${teacher.userId}`);
   };
 
   return (
@@ -113,13 +143,23 @@ const TeacherDetail = () => {
             </div>
 
             {isAuthenticated && user?.role === USER_ROLES.STUDENT ? (
-              <Button type="primary" size="large" block onClick={handleBookClick}>
-                立即预约
-              </Button>
+              <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                <Button size="large" block icon={<MessageOutlined />} onClick={handleChatClick}>
+                  先和老师沟通
+                </Button>
+                <Button type="primary" size="large" block icon={<BookOutlined />} onClick={handleBookClick}>
+                  直接预约
+                </Button>
+              </Space>
             ) : !isAuthenticated ? (
-              <Button type="primary" size="large" block onClick={() => navigate('/login')}>
-                登录后预约
-              </Button>
+              <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                <Button size="large" block icon={<MessageOutlined />} onClick={() => navigate(getRegisterPath('chat'))}>
+                  注册后先沟通
+                </Button>
+                <Button type="primary" size="large" block icon={<BookOutlined />} onClick={() => navigate(getRegisterPath('book'))}>
+                  注册后预约
+                </Button>
+              </Space>
             ) : null}
           </Col>
 

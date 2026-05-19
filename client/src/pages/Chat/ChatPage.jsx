@@ -1,20 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
-import { Input, Button, Avatar, Card, Tag, Rate, Spin, Typography, Space, message } from 'antd';
-import { SendOutlined, RobotOutlined, UserOutlined, BookOutlined } from '@ant-design/icons';
+import { useEffect, useRef, useState } from 'react';
+import { Avatar, Button, Card, Input, message, Rate, Space, Spin, Tag, Typography } from 'antd';
+import { BookOutlined, RobotOutlined, SendOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { agentAPI } from '../../api';
 import { useAuthStore } from '../../store/authStore';
 import BookingModal from '../../components/BookingModal';
+import { USER_ROLES } from '../../utils/constants';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 const WELCOME_MSG = {
   role: 'agent',
-  content: '您好！我是家教AI助手 🎓\n\n我可以帮您：\n• 🔍 智能匹配最合适的家教老师\n• 💬 多轮对话理解您的需求\n• 📅 一键预约课程\n\n请告诉我您想找什么样的老师？',
+  content: '您好，我是家教 AI 助手。\n\n我可以帮您智能匹配合适的家教老师、理解学习需求，并推荐可预约的老师。\n\n请告诉我您想找什么样的老师。',
   time: new Date().toISOString()
 };
 
-const ChatPage = () => {
+const ChatPage = ({ embedded = false, guestMode = false }) => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   const [sessionId, setSessionId] = useState(null);
@@ -23,7 +24,7 @@ const ChatPage = () => {
   const [loading, setLoading] = useState(false);
   const [bookingTeacher, setBookingTeacher] = useState(null);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -35,11 +36,29 @@ const ChatPage = () => {
         message.error('创建会话失败');
       }
     };
+
     createSession();
   }, []);
 
+  const isNearBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    return container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+  };
+
+  const scrollToBottom = (force = false) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    if (!force && !isNearBottom()) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth'
+    });
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const isNewUserMessage = messages.length > 0 && messages[messages.length - 1].role === 'user';
+    scrollToBottom(isNewUserMessage);
   }, [messages]);
 
   const handleSend = async () => {
@@ -61,10 +80,10 @@ const ChatPage = () => {
         cards: result.cards || [],
         time: new Date().toISOString()
       }]);
-    } catch (err) {
+    } catch {
       setMessages(prev => [...prev, {
         role: 'agent',
-        content: '抱歉，AI助手遇到了点问题，请稍后重试。',
+        content: '抱歉，AI 助手遇到了一点问题，请稍后重试。',
         time: new Date().toISOString()
       }]);
     } finally {
@@ -80,11 +99,17 @@ const ChatPage = () => {
   };
 
   const handleBook = (teacher) => {
-    if (!isAuthenticated) {
-      message.info('请先登录后再预约');
-      navigate('/login');
+    if (guestMode || !isAuthenticated) {
+      message.info('请先注册学生账号后再预约');
+      navigate(`/register?role=${USER_ROLES.STUDENT}&intent=book&teacherId=${teacher.userId}`);
       return;
     }
+
+    if (user?.role !== USER_ROLES.STUDENT) {
+      message.info('请使用学生账号预约老师');
+      return;
+    }
+
     setBookingTeacher(teacher);
     setBookingOpen(true);
   };
@@ -93,17 +118,22 @@ const ChatPage = () => {
     const isUser = msg.role === 'user';
 
     return (
-      <div key={index} style={{
-        display: 'flex', marginBottom: 20,
-        justifyContent: isUser ? 'flex-end' : 'flex-start'
-      }}>
+      <div
+        key={index}
+        style={{
+          display: 'flex',
+          marginBottom: 20,
+          justifyContent: isUser ? 'flex-end' : 'flex-start'
+        }}
+      >
         {!isUser && (
           <Avatar
             icon={<RobotOutlined />}
             style={{ backgroundColor: '#1677ff', flexShrink: 0, marginRight: 12 }}
           />
         )}
-        <div style={{ maxWidth: '75%' }}>
+
+        <div style={{ maxWidth: embedded ? '88%' : '75%' }}>
           <div style={{
             padding: '12px 16px',
             borderRadius: 12,
@@ -133,18 +163,20 @@ const ChatPage = () => {
                         )}
                       </Space>
                     }
-                    extra={
-                      <Rate disabled value={card.rating} allowHalf style={{ fontSize: 14 }} />
-                    }
+                    extra={<Rate disabled value={card.rating} allowHalf style={{ fontSize: 14 }} />}
                     onClick={() => navigate(`/teachers/${card.userId}`)}
                   >
                     <div style={{ marginBottom: 8 }}>
                       {card.subjects?.map(s => <Tag key={s} color="blue" style={{ marginBottom: 4 }}>{s}</Tag>)}
                     </div>
-                    <Paragraph type="secondary" style={{ fontSize: 13, margin: '8px 0' }} ellipsis={{ rows: 2 }}>
+                    <Typography.Paragraph
+                      type="secondary"
+                      style={{ fontSize: 13, margin: '8px 0' }}
+                      ellipsis={{ rows: 2 }}
+                    >
                       {card.introduction}
-                    </Paragraph>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    </Typography.Paragraph>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                       <div>
                         <Text style={{ fontSize: 18, color: '#ff4d4f', fontWeight: 'bold' }}>
                           ¥{card.hourlyRate}/小时
@@ -171,6 +203,7 @@ const ChatPage = () => {
             </div>
           )}
         </div>
+
         {isUser && (
           <Avatar
             icon={<UserOutlined />}
@@ -182,23 +215,41 @@ const ChatPage = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 134px)', background: '#f0f2f5' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: embedded ? 560 : 'calc(100vh - 134px)',
+      background: '#f0f2f5',
+      border: embedded ? '1px solid #e5e7eb' : undefined,
+      borderRadius: embedded ? 8 : 0,
+      overflow: embedded ? 'hidden' : undefined
+    }}>
       <div style={{
-        background: '#fff', padding: '12px 24px', borderBottom: '1px solid #eee',
-        display: 'flex', alignItems: 'center', gap: 12
+        background: '#fff',
+        padding: '12px 24px',
+        borderBottom: '1px solid #eee',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12
       }}>
         <Avatar icon={<RobotOutlined />} style={{ backgroundColor: '#1677ff' }} size="large" />
         <div>
           <Text strong style={{ fontSize: 16 }}>AI 家教咨询助手</Text>
           <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>智能匹配 · 需求理解 · 一键预约</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            智能匹配 · 需求理解 · 一键预约
+          </Text>
         </div>
       </div>
 
       <div style={{
-        flex: 1, overflowY: 'auto', padding: '24px',
-        maxWidth: 860, width: '100%', margin: '0 auto'
-      }}>
+        flex: 1,
+        overflowY: 'auto',
+        padding: embedded ? 16 : 24,
+        maxWidth: 860,
+        width: '100%',
+        margin: '0 auto'
+      }} ref={messagesContainerRef}>
         {messages.map((msg, i) => renderMessage(msg, i))}
 
         {loading && (
@@ -213,11 +264,13 @@ const ChatPage = () => {
           </div>
         )}
 
-        <div ref={messagesEndRef} />
+        <div />
       </div>
 
       <div style={{
-        padding: '16px 24px', background: '#fff', borderTop: '1px solid #eee'
+        padding: '16px 24px',
+        background: '#fff',
+        borderTop: '1px solid #eee'
       }}>
         <div style={{ maxWidth: 860, margin: '0 auto', display: 'flex', gap: 12, alignItems: 'flex-end' }}>
           <Input.TextArea
@@ -225,7 +278,7 @@ const ChatPage = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="描述您找家教的需求，例如：初二的男孩，数学基础薄弱，需要一位耐心细致的老师..."
+            placeholder="描述您找家教的需求，例如：初二数学基础薄弱，需要耐心细致的老师..."
             autoSize={{ minRows: 1, maxRows: 4 }}
             disabled={loading || !sessionId}
             style={{ flex: 1 }}
@@ -250,7 +303,7 @@ const ChatPage = () => {
         onSuccess={() => {
           setMessages(prev => [...prev, {
             role: 'agent',
-            content: `预约请求已成功提交！${bookingTeacher?.fullName || '老师'}会尽快确认。您可以在"我的预约"页面查看预约状态。`,
+            content: `预约请求已成功提交。${bookingTeacher?.fullName || '老师'}会尽快确认，您可以进入“我的预约”查看预约状态。`,
             time: new Date().toISOString()
           }]);
         }}

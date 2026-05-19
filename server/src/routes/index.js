@@ -6,13 +6,15 @@ const teacherRoutes = require('./teacher');
 const bookingRoutes = require('./booking');
 const agentRoutes = require('./agent');
 const materialRoutes = require('./material');
+const chatRoutes = require('./chat');
 
 // Mount routes
 router.use('/auth', authRoutes);
-router.use('/teachers', teacherRoutes);
 router.use('/teachers', materialRoutes); // Material routes under /teachers
+router.use('/teachers', teacherRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/agent', agentRoutes);
+router.use('/chat', chatRoutes);
 
 // API health check
 router.get('/health', (req, res) => {

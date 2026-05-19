@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Button, Spin, Empty, List, Tag, Typography } from 'antd';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Alert, Button, Card, Col, Empty, List, Row, Spin, Statistic, Tag, Typography } from 'antd';
 import {
   CalendarOutlined,
   ClockCircleOutlined,
+  FileTextOutlined,
   MessageOutlined,
-  RobotOutlined,
-  SearchOutlined
+  UserOutlined
 } from '@ant-design/icons';
 import { useBookingStore } from '../../store/bookingStore';
 import { useAuthStore } from '../../store/authStore';
@@ -25,10 +25,12 @@ const statusColor = (status) => {
   return map[status] || 'default';
 };
 
-const StudentDashboard = () => {
+const TeacherDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
   const { bookings, loading, pagination, getMyBookings } = useBookingStore();
+  const shouldGuideProfile = searchParams.get('welcome') === 'profile';
 
   useEffect(() => {
     getMyBookings({ limit: 5 });
@@ -37,65 +39,64 @@ const StudentDashboard = () => {
   const activeBookings = bookings.filter(
     booking => booking.status === 'pending' || booking.status === 'accepted'
   );
+  const pendingBookings = bookings.filter(booking => booking.status === 'pending');
 
   return (
     <div style={{ padding: 24, background: '#f0f2f5', minHeight: 'calc(100vh - 134px)' }}>
       <Title level={3} style={{ marginBottom: 24 }}>欢迎回来，{user?.username}</Title>
 
+      {shouldGuideProfile && (
+        <Alert
+          type="info"
+          showIcon
+          message="欢迎成为平台教师"
+          description="请先完善教师档案，补充授课科目、课时费、个人简介和资质材料，学生才能更放心地了解并预约您。"
+          action={
+            <Button type="primary" onClick={() => navigate('/teacher/profile')}>
+              完善我的档案
+            </Button>
+          }
+          style={{ marginBottom: 24 }}
+        />
+      )}
+
       <Spin spinning={loading}>
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} md={6}>
-            <Card hoverable onClick={() => navigate('/teachers')}>
-              <Statistic title="找老师" prefix={<SearchOutlined />} value="浏览教师" />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card hoverable onClick={() => navigate('/chat')}>
-              <Statistic title="AI助手" prefix={<RobotOutlined />} value="智能匹配" />
+            <Card hoverable onClick={() => navigate('/teacher/profile')}>
+              <Statistic title="我的档案" prefix={<FileTextOutlined />} value="完善资料" />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card hoverable onClick={() => navigate('/messages')}>
-              <Statistic title="沟通" prefix={<MessageOutlined />} value="联系老师" />
+              <Statistic title="沟通" prefix={<MessageOutlined />} value="查看消息" />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
-            <Card hoverable onClick={() => navigate('/student/bookings')}>
+            <Card hoverable onClick={() => navigate('/teacher/bookings')}>
               <Statistic title="我的预约" prefix={<CalendarOutlined />} value={pagination.total || 0} />
             </Card>
           </Col>
-        </Row>
-
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={12} md={6}>
             <Card>
-              <Statistic title="进行中预约" prefix={<ClockCircleOutlined />} value={activeBookings.length} />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Card>
-              <Statistic
-                title="已完成课程"
-                prefix={<CalendarOutlined />}
-                value={bookings.filter(booking => booking.status === 'completed').length}
-              />
+              <Statistic title="待处理请求" prefix={<ClockCircleOutlined />} value={pendingBookings.length} />
             </Card>
           </Col>
         </Row>
       </Spin>
 
       <Card
-        title="最近预约"
-        extra={<Button type="link" onClick={() => navigate('/student/bookings')}>查看全部</Button>}
+        title="最近预约请求"
+        extra={<Button type="link" onClick={() => navigate('/teacher/bookings')}>查看全部</Button>}
       >
         <Spin spinning={loading}>
-          {bookings.length === 0 ? (
-            <Empty description="暂无预约记录">
-              <Button type="primary" onClick={() => navigate('/teachers')}>去浏览教师</Button>
+          {activeBookings.length === 0 ? (
+            <Empty description="暂无待处理或进行中的预约">
+              <Button type="primary" onClick={() => navigate('/teacher/profile')}>完善教师档案</Button>
             </Empty>
           ) : (
             <List
-              dataSource={bookings.slice(0, 5)}
+              dataSource={activeBookings.slice(0, 5)}
               renderItem={(booking) => (
                 <List.Item
                   extra={
@@ -105,11 +106,12 @@ const StudentDashboard = () => {
                   }
                 >
                   <List.Item.Meta
-                    title={`${booking.subject} - ${booking.teacher?.teacherProfile?.fullName || booking.teacher?.username || `教师#${booking.teacherId}`}`}
+                    avatar={<UserOutlined />}
+                    title={`${booking.subject} - ${booking.student?.username || `学生#${booking.studentId}`}`}
                     description={
                       <Text type="secondary">
                         {booking.bookingDate} {booking.startTime?.slice(0, 5)}-{booking.endTime?.slice(0, 5)}
-                        {booking.totalAmount ? ` · ¥${booking.totalAmount}` : ''}
+                        {booking.location ? ` · ${booking.location}` : ''}
                       </Text>
                     }
                   />
@@ -123,4 +125,4 @@ const StudentDashboard = () => {
   );
 };
 
-export default StudentDashboard;
+export default TeacherDashboard;

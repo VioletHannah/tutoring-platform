@@ -2,6 +2,7 @@ import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { getPostAuthRedirectPath } from '../../utils/authRedirect';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const Login = () => {
 
     if (result.success) {
       message.success('登录成功！');
-      navigate('/');
+      navigate(getPostAuthRedirectPath(result.user?.role), { replace: true });
     } else {
       message.error('登录失败，请检查邮箱和密码');
     }

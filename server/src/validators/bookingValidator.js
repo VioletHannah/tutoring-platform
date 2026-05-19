@@ -6,13 +6,13 @@ const createBookingSchema = Joi.object({
   bookingDate: Joi.date().iso().required(),
   startTime: Joi.string().pattern(/^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/).required(),
   endTime: Joi.string().pattern(/^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/).required(),
-  location: Joi.string().max(255).optional(),
-  note: Joi.string().max(1000).optional()
+  location: Joi.string().max(255).optional().allow(''),
+  note: Joi.string().max(1000).optional().allow('')
 });
 
 const updateBookingStatusSchema = Joi.object({
   status: Joi.string().valid('accepted', 'rejected', 'completed', 'cancelled').required(),
-  teacherReply: Joi.string().max(1000).optional()
+  teacherReply: Joi.string().max(1000).optional().allow('')
 });
 
 const getBookingsSchema = Joi.object({
@@ -27,7 +27,7 @@ const suggestScheduleSchema = Joi.object({
   teacherId: Joi.number().integer().required(),
   subject: Joi.string().min(1).max(100).required(),
   startDate: Joi.date().iso().required(),
-  endDate: Joi.date().iso().greater(Joi.ref('startDate')).required(),
+  endDate: Joi.date().iso().min(Joi.ref('startDate')).required(),
   durationMinutes: Joi.number().integer().min(1).required(),
   sessionsPerWeek: Joi.number().integer().min(1).required(),
   preferredWeekdays: Joi.array().items(Joi.number().integer().min(1).max(7)).min(1).required(),
@@ -38,8 +38,8 @@ const suggestScheduleSchema = Joi.object({
     })
   ).min(1).required(),
   totalSessions: Joi.number().integer().min(1).optional(),
-  location: Joi.string().max(255).optional(),
-  note: Joi.string().max(1000).optional()
+  location: Joi.string().max(255).optional().allow(''),
+  note: Joi.string().max(1000).optional().allow('')
 });
 
 const confirmScheduleSchema = Joi.object({
@@ -52,8 +52,8 @@ const confirmScheduleSchema = Joi.object({
       endTime: Joi.string().pattern(/^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/).required()
     })
   ).min(1).required(),
-  location: Joi.string().max(255).optional(),
-  note: Joi.string().max(1000).optional()
+  location: Joi.string().max(255).optional().allow(''),
+  note: Joi.string().max(1000).optional().allow('')
 });
 
 module.exports = {

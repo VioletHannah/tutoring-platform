@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { bookingAPI } from '../api';
 
+const exposeValidationDetails = (error) => {
+  const data = error?.response?.data;
+  if (Array.isArray(data?.errors) && data.errors.length > 0) {
+    data.message = `${data.message || 'Validation error'}: ${data.errors.join('; ')}`;
+  }
+  return error;
+};
+
 export const useBookingStore = create((set) => ({
   bookings: [],
   currentBooking: null,
@@ -28,7 +36,7 @@ export const useBookingStore = create((set) => ({
       return { success: true };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -44,7 +52,7 @@ export const useBookingStore = create((set) => ({
       return { success: true, booking: res.data };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -57,7 +65,7 @@ export const useBookingStore = create((set) => ({
       return { success: true, booking: res.data };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -70,7 +78,7 @@ export const useBookingStore = create((set) => ({
       return { success: true };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -83,7 +91,7 @@ export const useBookingStore = create((set) => ({
       return { success: true };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -96,7 +104,7 @@ export const useBookingStore = create((set) => ({
       return { success: true };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -109,7 +117,7 @@ export const useBookingStore = create((set) => ({
       return { success: true };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -122,7 +130,7 @@ export const useBookingStore = create((set) => ({
       return { success: true };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -135,7 +143,7 @@ export const useBookingStore = create((set) => ({
       return { success: true, suggestions: res.data.suggestions, summary: res.data.summary };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   },
 
@@ -148,7 +156,7 @@ export const useBookingStore = create((set) => ({
       return { success: true, bookings: res.data };
     } catch (error) {
       set({ loading: false });
-      return { success: false, error };
+      return { success: false, error: exposeValidationDetails(error) };
     }
   }
 }));
