@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Card, Row, Col, Avatar, Tag, Button, Descriptions, Image, Spin, Empty, Rate, Divider, Typography, List, Alert, Space } from 'antd';
 import { UserOutlined, ClockCircleOutlined, DollarOutlined, BookOutlined, CheckCircleOutlined, RobotOutlined, CommentOutlined, SafetyCertificateOutlined, BankOutlined, ExperimentOutlined, ReadOutlined, PaperClipOutlined, FileTextOutlined, MessageOutlined } from '@ant-design/icons';
 import { useTeacherStore } from '../../store/teacherStore';
@@ -21,10 +21,12 @@ const MATERIAL_TYPE_ICONS = {
 const TeacherDetail = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentTeacher, loading, getTeacherById } = useTeacherStore();
   const { isAuthenticated, user } = useAuthStore();
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [rebookDefaults, setRebookDefaults] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [publicMaterials, setPublicMaterials] = useState([]);
@@ -45,12 +47,13 @@ const TeacherDetail = () => {
       user?.role === USER_ROLES.STUDENT &&
       currentTeacher?.userId
     ) {
+      setRebookDefaults(location.state?.rebookFrom || null);
       setBookingOpen(true);
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('book');
       setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, setSearchParams, isAuthenticated, user?.role, currentTeacher?.userId]);
+  }, [searchParams, setSearchParams, location.state, isAuthenticated, user?.role, currentTeacher?.userId]);
 
   const fetchReviews = async (id) => {
     setReviewsLoading(true);
@@ -108,6 +111,7 @@ const TeacherDetail = () => {
     if (user?.role !== USER_ROLES.STUDENT) {
       return;
     }
+    setRebookDefaults(null);
     setBookingOpen(true);
   };
 
@@ -328,7 +332,11 @@ const TeacherDetail = () => {
       <BookingModal
         open={bookingOpen}
         teacher={teacher}
-        onClose={() => setBookingOpen(false)}
+        initialBooking={rebookDefaults}
+        onClose={() => {
+          setBookingOpen(false);
+          setRebookDefaults(null);
+        }}
       />
     </div>
   );

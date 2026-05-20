@@ -4,10 +4,27 @@ const { Op } = require('sequelize');
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 /**
+ * Normalize DATEONLY strings or Date values to "YYYY-MM-DD" for comparisons
+ */
+function normalizeDate(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+}
+
+/**
  * Check if two time ranges conflict
  * [startA, endA) and [startB, endB) conflict if: startA < endB && endA > startB
  */
 function isTimeConflict(candidate, existingBooking) {
+  const dateA = normalizeDate(candidate.bookingDate || candidate.date);
+  const dateB = normalizeDate(existingBooking.bookingDate || existingBooking.date);
+
+  if (dateA && dateB && dateA !== dateB) {
+    return false;
+  }
+
   const startA = candidate.startTime;
   const endA = candidate.endTime;
   const startB = existingBooking.startTime;

@@ -1,26 +1,53 @@
 const conversations = new Map();
 
-const TTL = 30 * 60 * 1000; // 30 min expiry
+const TTL = 30 * 60 * 1000;
+const MAX_MESSAGES = 20;
+
+function createConversation(sessionId) {
+  const now = Date.now();
+  return {
+    stage: 'new',
+    claudeSessionId: sessionId,
+    claudeSessionStarted: false,
+    teacherCatalogSent: false,
+    messages: [],
+    createdAt: now,
+    updatedAt: now
+  };
+}
 
 function getOrCreate(sessionId) {
   if (!conversations.has(sessionId)) {
-    conversations.set(sessionId, { stage: 0, messages: [], createdAt: Date.now() });
+    conversations.set(sessionId, createConversation(sessionId));
   }
+
   return conversations.get(sessionId);
 }
 
 function update(sessionId, state, userMsg, agentMsg) {
   const conv = conversations.get(sessionId);
   if (!conv) return;
-  conv.stage = state.stage;
+
+  conv.stage = state.stage || conv.stage;
+  conv.claudeSessionId = state.claudeSessionId || conv.claudeSessionId;
+  conv.claudeSessionStarted = Boolean(state.claudeSessionStarted || conv.claudeSessionStarted);
+  conv.teacherCatalogSent = Boolean(state.teacherCatalogSent || conv.teacherCatalogSent);
+  conv.searchCriteria = state.searchCriteria || conv.searchCriteria || {};
+  conv.lastRecommendedTeacherIds = state.lastRecommendedTeacherIds || [];
   conv.messages.push(
     { role: 'user', content: userMsg, time: new Date().toISOString() },
-    { role: 'agent', content: agentMsg.text, cards: agentMsg.cards || [], time: new Date().toISOString() }
+    {
+      role: 'agent',
+      content: agentMsg.text,
+      cards: agentMsg.cards || [],
+      time: new Date().toISOString()
+    }
   );
-  if (state.subject) conv.subject = state.subject;
-  if (state.grade) conv.grade = state.grade;
-  if (state.gender) conv.gender = state.gender;
-  if (state.selectedTeacher) conv.selectedTeacher = state.selectedTeacher;
+
+  if (conv.messages.length > MAX_MESSAGES) {
+    conv.messages = conv.messages.slice(-MAX_MESSAGES);
+  }
+
   conv.updatedAt = Date.now();
 }
 
@@ -32,7 +59,9 @@ function getHistory(sessionId) {
 function cleanup() {
   const now = Date.now();
   for (const [id, conv] of conversations) {
-    if (now - conv.updatedAt > TTL) conversations.delete(id);
+    if (now - (conv.updatedAt || conv.createdAt || 0) > TTL) {
+      conversations.delete(id);
+    }
   }
 }
 

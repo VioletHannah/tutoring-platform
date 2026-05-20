@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Form, Select, DatePicker, TimePicker, Input, InputNumber, message, Descriptions, Tag, Radio, Button, Table, Alert, Checkbox, Card } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useBookingStore } from '../store/bookingStore';
 import { SUBJECTS, WEEKDAY_OPTIONS, DURATION_OPTIONS, SESSIONS_PER_WEEK_OPTIONS, TIME_RANGE_PRESETS } from '../utils/constants';
 
-const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
+const BookingModal = ({ open, teacher, initialBooking, onClose, onSuccess }) => {
   const navigate = useNavigate();
   const [manualForm] = Form.useForm();
   const [scheduleForm] = Form.useForm();
@@ -18,13 +18,43 @@ const BookingModal = ({ open, teacher, onClose, onSuccess }) => {
 
   const { createBooking, suggestSchedule, confirmSchedule } = useBookingStore();
   const subjects = teacher?.subjects?.length ? teacher.subjects : SUBJECTS;
-  const subjectInitialValue = subjects.length > 0 ? [subjects[0]] : undefined;
+  const subjectInitialValue = useMemo(() => (
+    subjects.length > 0 ? [subjects[0]] : undefined
+  ), [subjects]);
 
   const normalizeSubject = (subject) => (
     Array.isArray(subject) ? subject.join('、') : subject
   );
 
   const getSubjectValue = (subject) => normalizeSubject(subject) || subjects[0];
+
+  const toSubjectFieldValue = (subject) => {
+    if (Array.isArray(subject)) return subject;
+    return subject ? [subject] : subjectInitialValue;
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    setSuggestions([]);
+    setSelectedSuggestionIndices([]);
+    setGeneratedSummary(null);
+
+    if (!initialBooking) {
+      manualForm.setFieldsValue({ subject: subjectInitialValue });
+      return;
+    }
+
+    setBookingMode('manual');
+    manualForm.setFieldsValue({
+      subject: toSubjectFieldValue(initialBooking.subject),
+      bookingDate: initialBooking.bookingDate ? dayjs(initialBooking.bookingDate) : undefined,
+      startTime: initialBooking.startTime ? dayjs(`1970-01-01T${initialBooking.startTime}`) : undefined,
+      endTime: initialBooking.endTime ? dayjs(`1970-01-01T${initialBooking.endTime}`) : undefined,
+      location: initialBooking.location || undefined,
+      note: initialBooking.note || undefined
+    });
+  }, [open, initialBooking, manualForm, subjectInitialValue]);
 
   const showBookingSuccess = (description) => {
     Modal.success({

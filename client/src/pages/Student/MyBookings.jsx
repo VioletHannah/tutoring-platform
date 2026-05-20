@@ -51,6 +51,21 @@ const MyBookings = () => {
     setReviewText('');
   };
 
+  const handleRebook = (record) => {
+    navigate(`/teachers/${record.teacherId}?book=1`, {
+      state: {
+        rebookFrom: {
+          subject: record.subject,
+          bookingDate: record.bookingDate,
+          startTime: record.startTime,
+          endTime: record.endTime,
+          location: record.location,
+          note: record.note
+        }
+      }
+    });
+  };
+
   const handleSubmitReview = async () => {
     if (!reviewRating) {
       message.warning('请选择评分');
@@ -146,7 +161,7 @@ const MyBookings = () => {
             </Button>
           )}
           {record.status === BOOKING_STATUS.CANCELLED && (
-            <Button type="link" size="small" onClick={() => navigate(`/teachers/${record.teacherId}`)}>
+            <Button type="link" size="small" onClick={() => handleRebook(record)}>
               重新预约
             </Button>
           )}

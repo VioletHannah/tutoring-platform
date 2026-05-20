@@ -6,7 +6,7 @@ export const agentAPI = {
   },
 
   sendMessage(sessionId, message) {
-    return request.post('/agent/message', { sessionId, message });
+    return request.post('/agent/message', { sessionId, message }, { timeout: 120000 });
   },
 
   getConversation(sessionId) {
